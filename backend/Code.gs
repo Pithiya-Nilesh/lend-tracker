@@ -9,8 +9,9 @@
  *
  * INCLUDES:
  * 1. Accrued Interest Calculation (Yearly Simple, Monthly Simple, Fixed)
- * 3. File & Receipt Uploads to Google Drive (with viewable links)
- * 4. Secure Read-Only Borrower Portal (via unguessable portal tokens)
+ * 2. File & Receipt Uploads to Google Drive (with viewable links)
+ * 3. Secure Read-Only Borrower Portal (via unguessable portal tokens)
+ * 4. Loans (money lent OUT) + Borrowings (money borrowed IN)
  *
  * TIMEZONE: Asia/Kolkata (IST)
  * CURRENCY: INR (₹)
@@ -22,6 +23,8 @@ var TIMEZONE = "Asia/Kolkata";
 var SHEET_LOANS = "Loans";
 var SHEET_PAYMENTS = "Payments";
 var SHEET_REMINDERS_LOG = "RemindersLog";
+var SHEET_BORROWINGS = "Borrowings";
+var SHEET_BORROW_PAYMENTS = "BorrowPayments";
 var DRIVE_FOLDER_ATTACHMENTS = "LendTracker_Attachments";
 
 /**
@@ -121,6 +124,64 @@ function ensureSheets() {
     remindersSheet.getRange(1, 1, 1, 5).setFontWeight("bold").setBackground("#e2e8f0");
     remindersSheet.setFrozenRows(1);
   }
+
+  // 4. Borrowings Sheet (money you borrowed FROM others)
+  var borrowingsSheet = ss.getSheetByName(SHEET_BORROWINGS);
+  var borrowingsHeaders = [
+    "borrowing_id",
+    "lender_name",
+    "amount",
+    "date_taken",
+    "expected_return_date",
+    "phone_or_email",
+    "notes",
+    "created_at",
+    "updated_at",
+    "interest_rate",
+    "interest_type",
+    "attachment_url",
+    "portal_token"
+  ];
+
+  if (!borrowingsSheet) {
+    borrowingsSheet = ss.insertSheet(SHEET_BORROWINGS);
+    borrowingsSheet.appendRow(borrowingsHeaders);
+    borrowingsSheet.getRange(1, 1, 1, borrowingsHeaders.length).setFontWeight("bold").setBackground("#fef9c3");
+    borrowingsSheet.setFrozenRows(1);
+  } else {
+    var bCols = borrowingsSheet.getLastColumn();
+    if (bCols < borrowingsHeaders.length) {
+      for (var bc = bCols; bc < borrowingsHeaders.length; bc++) {
+        borrowingsSheet.getRange(1, bc + 1).setValue(borrowingsHeaders[bc]).setFontWeight("bold").setBackground("#fef9c3");
+      }
+    }
+  }
+
+  // 5. BorrowPayments Sheet (repayments you made to lenders)
+  var borrowPaymentsSheet = ss.getSheetByName(SHEET_BORROW_PAYMENTS);
+  var borrowPaymentsHeaders = [
+    "borrow_payment_id",
+    "borrowing_id",
+    "amount",
+    "payment_date",
+    "notes",
+    "created_at",
+    "receipt_url"
+  ];
+
+  if (!borrowPaymentsSheet) {
+    borrowPaymentsSheet = ss.insertSheet(SHEET_BORROW_PAYMENTS);
+    borrowPaymentsSheet.appendRow(borrowPaymentsHeaders);
+    borrowPaymentsSheet.getRange(1, 1, 1, borrowPaymentsHeaders.length).setFontWeight("bold").setBackground("#fef9c3");
+    borrowPaymentsSheet.setFrozenRows(1);
+  } else {
+    var bpCols = borrowPaymentsSheet.getLastColumn();
+    if (bpCols < borrowPaymentsHeaders.length) {
+      for (var bpc = bpCols; bpc < borrowPaymentsHeaders.length; bpc++) {
+        borrowPaymentsSheet.getRange(1, bpc + 1).setValue(borrowPaymentsHeaders[bpc]).setFontWeight("bold").setBackground("#fef9c3");
+      }
+    }
+  }
 }
 
 /**
@@ -187,7 +248,7 @@ function doGet(e) {
     var params = e ? e.parameter : {};
     var action = params.action || "ping";
 
-    // 4. BORROWER READ-ONLY PORTAL (No admin passcode needed, secured by unique token)
+    // BORROWER READ-ONLY PORTAL (No admin passcode needed, secured by unique token)
     if (action === "getPortalData") {
       var token = params.token || "";
       if (!token) {
@@ -286,6 +347,17 @@ function doPost(e) {
         return createJsonResponse(handleAddPayment(data));
       case "deletePayment":
         return createJsonResponse(handleDeletePayment(data));
+      // --- Borrowings (money borrowed FROM others) ---
+      case "addBorrowing":
+        return createJsonResponse(handleAddBorrowing(data));
+      case "updateBorrowing":
+        return createJsonResponse(handleUpdateBorrowing(data));
+      case "deleteBorrowing":
+        return createJsonResponse(handleDeleteBorrowing(data));
+      case "addBorrowPayment":
+        return createJsonResponse(handleAddBorrowPayment(data));
+      case "deleteBorrowPayment":
+        return createJsonResponse(handleDeleteBorrowPayment(data));
       default:
         return createJsonResponse({
           success: false,
@@ -337,17 +409,23 @@ function computeAccruedInterest(principal, rate, type, dateGivenStr, endDateStr)
 }
 
 /**
- * Fetches all loans and payments, calculates interest, remaining balances, and statuses.
+ * Fetches all loans, payments, borrowings, borrow_payments, calculates interest,
+ * remaining balances, and statuses. Returns combined data object.
  */
 function fetchAllData() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var loansSheet = ss.getSheetByName(SHEET_LOANS);
   var paymentsSheet = ss.getSheetByName(SHEET_PAYMENTS);
+  var borrowingsSheet = ss.getSheetByName(SHEET_BORROWINGS);
+  var borrowPaymentsSheet = ss.getSheetByName(SHEET_BORROW_PAYMENTS);
 
   var loansRaw = loansSheet.getDataRange().getValues();
   var paymentsRaw = paymentsSheet.getDataRange().getValues();
+  var borrowingsRaw = borrowingsSheet ? borrowingsSheet.getDataRange().getValues() : [[]];
+  var borrowPaymentsRaw = borrowPaymentsSheet ? borrowPaymentsSheet.getDataRange().getValues() : [[]];
   var todayStr = Utilities.formatDate(new Date(), TIMEZONE, "yyyy-MM-dd");
 
+  // ---- Process Loan Payments ----
   var paymentsByLoan = {};
   var allPaymentsList = [];
 
@@ -382,6 +460,7 @@ function fetchAllData() {
     }
   }
 
+  // ---- Process Loans ----
   var loansList = [];
   var totalLent = 0;
   var totalReceived = 0;
@@ -489,6 +568,148 @@ function fetchAllData() {
     return (b.date_given || "").localeCompare(a.date_given || "");
   });
 
+  // ---- Process BorrowPayments ----
+  var borrowPaymentsByBorrowing = {};
+  var allBorrowPaymentsList = [];
+
+  if (borrowPaymentsRaw.length > 1) {
+    for (var bp = 1; bp < borrowPaymentsRaw.length; bp++) {
+      var bpRow = borrowPaymentsRaw[bp];
+      if (!bpRow[0]) continue;
+
+      var bpDate = bpRow[3];
+      var formattedBpDate = "";
+      if (bpDate instanceof Date) {
+        formattedBpDate = Utilities.formatDate(bpDate, TIMEZONE, "yyyy-MM-dd");
+      } else if (bpDate) {
+        formattedBpDate = String(bpDate).trim().substring(0, 10);
+      }
+
+      var bpObj = {
+        borrow_payment_id: String(bpRow[0]),
+        borrowing_id: String(bpRow[1]),
+        amount: Number(bpRow[2]) || 0,
+        payment_date: formattedBpDate,
+        notes: String(bpRow[4] || ""),
+        created_at: String(bpRow[5] || ""),
+        receipt_url: String(bpRow[6] || "")
+      };
+
+      allBorrowPaymentsList.push(bpObj);
+      if (!borrowPaymentsByBorrowing[bpObj.borrowing_id]) {
+        borrowPaymentsByBorrowing[bpObj.borrowing_id] = [];
+      }
+      borrowPaymentsByBorrowing[bpObj.borrowing_id].push(bpObj);
+    }
+  }
+
+  // ---- Process Borrowings ----
+  var borrowingsList = [];
+  var totalBorrowed = 0;
+  var totalRepaid = 0;
+  var borrowStatusCounts = { all: 0, pending: 0, partial: 0, completed: 0, overdue: 0 };
+
+  if (borrowingsRaw.length > 1) {
+    for (var b = 1; b < borrowingsRaw.length; b++) {
+      var bRow = borrowingsRaw[b];
+      if (!bRow[0]) continue;
+
+      var borrowingId = String(bRow[0]);
+      var bPrincipal = Number(bRow[2]) || 0;
+
+      var bDateTaken = bRow[3];
+      var bDateTakenStr = (bDateTaken instanceof Date)
+        ? Utilities.formatDate(bDateTaken, TIMEZONE, "yyyy-MM-dd")
+        : String(bDateTaken || "").trim().substring(0, 10);
+
+      var bReturnDate = bRow[4];
+      var bReturnDateStr = (bReturnDate instanceof Date)
+        ? Utilities.formatDate(bReturnDate, TIMEZONE, "yyyy-MM-dd")
+        : String(bReturnDate || "").trim().substring(0, 10);
+
+      var bInterestRate = Number(bRow[9]) || 0;
+      var bInterestType = String(bRow[10] || "none").trim();
+      var bAttachmentUrl = String(bRow[11] || "").trim();
+      var bPortalToken = String(bRow[12] || "").trim();
+
+      // Generate portal token on the fly if missing
+      if (!bPortalToken) {
+        bPortalToken = "bport_" + Utilities.getUuid().replace(/-/g, "").substring(0, 16);
+        borrowingsSheet.getRange(b + 1, 13).setValue(bPortalToken);
+      }
+
+      var bPayments = borrowPaymentsByBorrowing[borrowingId] || [];
+      bPayments.sort(function(a, b) {
+        return (b.payment_date || "").localeCompare(a.payment_date || "");
+      });
+
+      var bTotalRepaid = 0;
+      for (var bk = 0; bk < bPayments.length; bk++) {
+        bTotalRepaid += bPayments[bk].amount;
+      }
+      bTotalRepaid = Math.round(bTotalRepaid * 100) / 100;
+
+      var bAccruedInterest = computeAccruedInterest(bPrincipal, bInterestRate, bInterestType, bDateTakenStr, todayStr);
+      var bTotalPayable = Math.round((bPrincipal + bAccruedInterest) * 100) / 100;
+      var bRemainingBalance = Math.max(0, Math.round((bTotalPayable - bTotalRepaid) * 100) / 100);
+
+      var bStatus = "Pending";
+      if (bRemainingBalance <= 0) {
+        bStatus = "Completed";
+      } else if (bTotalRepaid > 0) {
+        bStatus = "Partial";
+      } else {
+        bStatus = "Pending";
+      }
+
+      var bIsOverdue = false;
+      var bDaysDiff = null;
+      if (bStatus !== "Completed" && bReturnDateStr) {
+        var bDiffTime = new Date(bReturnDateStr).getTime() - new Date(todayStr).getTime();
+        bDaysDiff = Math.ceil(bDiffTime / (1000 * 60 * 60 * 24));
+        if (bDaysDiff < 0) {
+          bIsOverdue = true;
+        }
+      }
+
+      totalBorrowed += bPrincipal;
+      totalRepaid += bTotalRepaid;
+      borrowStatusCounts.all++;
+      if (bStatus === "Completed") borrowStatusCounts.completed++;
+      else if (bStatus === "Partial") borrowStatusCounts.partial++;
+      else borrowStatusCounts.pending++;
+      if (bIsOverdue) borrowStatusCounts.overdue++;
+
+      borrowingsList.push({
+        borrowing_id: borrowingId,
+        lender_name: String(bRow[1] || "").trim(),
+        amount: bPrincipal,
+        date_taken: bDateTakenStr,
+        expected_return_date: bReturnDateStr,
+        phone_or_email: String(bRow[5] || "").trim(),
+        notes: String(bRow[6] || "").trim(),
+        created_at: String(bRow[7] || ""),
+        updated_at: String(bRow[8] || ""),
+        interest_rate: bInterestRate,
+        interest_type: bInterestType,
+        accrued_interest: bAccruedInterest,
+        total_payable: bTotalPayable,
+        total_repaid: bTotalRepaid,
+        remaining_balance: bRemainingBalance,
+        status: bStatus,
+        is_overdue: bIsOverdue,
+        days_until_due: bDaysDiff,
+        attachment_url: bAttachmentUrl,
+        portal_token: bPortalToken,
+        payments: bPayments
+      });
+    }
+  }
+
+  borrowingsList.sort(function(a, b) {
+    return (b.date_taken || "").localeCompare(a.date_taken || "");
+  });
+
   return {
     loans: loansList,
     payments: allPaymentsList,
@@ -497,6 +718,15 @@ function fetchAllData() {
       total_received: Math.round(totalReceived * 100) / 100,
       total_outstanding: Math.max(0, Math.round((totalLent - totalReceived) * 100) / 100),
       counts: statusCounts,
+      today: todayStr
+    },
+    borrowings: borrowingsList,
+    borrow_payments: allBorrowPaymentsList,
+    borrow_summary: {
+      total_borrowed: Math.round(totalBorrowed * 100) / 100,
+      total_repaid: Math.round(totalRepaid * 100) / 100,
+      total_outstanding: Math.max(0, Math.round((totalBorrowed - totalRepaid) * 100) / 100),
+      counts: borrowStatusCounts,
       today: todayStr
     }
   };
@@ -740,47 +970,311 @@ function handleDeletePayment(data) {
   return { success: false, error: "Payment not found." };
 }
 
-/**
- * ==============================================================================
- * BORROWER PORTAL PUBLIC FETCHER (Secured by unguessable portal token)
- * ==============================================================================
- */
-function handleGetPortalData(portalToken) {
-  var allData = fetchAllData();
-  var loans = allData.loans;
-  var targetLoan = null;
+// ==============================================================================
+// BORROWINGS HANDLERS (money borrowed FROM others — you need to repay)
+// ==============================================================================
 
-  for (var i = 0; i < loans.length; i++) {
-    if (loans[i].portal_token === portalToken) {
-      targetLoan = loans[i];
+/**
+ * Adds a new borrowing record (money you received from a lender)
+ */
+function handleAddBorrowing(data) {
+  var lenderName = (data.lender_name || "").toString().trim();
+  var amount = Number(data.amount);
+  var dateTaken = (data.date_taken || "").toString().trim();
+  var expectedReturnDate = (data.expected_return_date || "").toString().trim();
+  var contact = (data.phone_or_email || "").toString().trim();
+  var notes = (data.notes || "").toString().trim();
+  var interestRate = Number(data.interest_rate) || 0;
+  var interestType = (data.interest_type || "none").toString().trim();
+
+  if (!lenderName) return { success: false, error: "Lender name is required." };
+  if (!amount || isNaN(amount) || amount <= 0) return { success: false, error: "Amount must be a positive number." };
+  if (!dateTaken) dateTaken = Utilities.formatDate(new Date(), TIMEZONE, "yyyy-MM-dd");
+
+  // Handle optional file upload to Google Drive
+  var attachmentUrl = "";
+  if (data.fileData && data.fileName) {
+    attachmentUrl = saveFileToDrive(data.fileData, data.fileName, data.mimeType);
+  } else if (data.attachment_url) {
+    attachmentUrl = data.attachment_url;
+  }
+
+  var nowIso = Utilities.formatDate(new Date(), TIMEZONE, "yyyy-MM-dd'T'HH:mm:ss'Z'");
+  var borrowingId = "borrow_" + new Date().getTime() + "_" + Math.floor(Math.random() * 10000);
+  var portalToken = "bport_" + Utilities.getUuid().replace(/-/g, "").substring(0, 16);
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEET_BORROWINGS);
+
+  sheet.appendRow([
+    borrowingId,
+    lenderName,
+    amount,
+    dateTaken,
+    expectedReturnDate,
+    contact,
+    notes,
+    nowIso,
+    nowIso,
+    interestRate,
+    interestType,
+    attachmentUrl,
+    portalToken
+  ]);
+
+  return {
+    success: true,
+    borrowing_id: borrowingId,
+    portal_token: portalToken,
+    attachment_url: attachmentUrl,
+    message: "Borrowing added successfully."
+  };
+}
+
+/**
+ * Updates an existing borrowing record
+ */
+function handleUpdateBorrowing(data) {
+  var borrowingId = (data.borrowing_id || "").toString().trim();
+  if (!borrowingId) return { success: false, error: "Borrowing ID is required." };
+
+  var lenderName = (data.lender_name || "").toString().trim();
+  var amount = Number(data.amount);
+  var dateTaken = (data.date_taken || "").toString().trim();
+  var expectedReturnDate = (data.expected_return_date || "").toString().trim();
+  var contact = (data.phone_or_email || "").toString().trim();
+  var notes = (data.notes || "").toString().trim();
+  var interestRate = Number(data.interest_rate) || 0;
+  var interestType = (data.interest_type || "none").toString().trim();
+
+  if (!lenderName) return { success: false, error: "Lender name is required." };
+  if (!amount || isNaN(amount) || amount <= 0) return { success: false, error: "Amount must be a positive number." };
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEET_BORROWINGS);
+  var values = sheet.getDataRange().getValues();
+
+  var rowIndex = -1;
+  var existingAttachment = "";
+  var existingToken = "";
+  for (var i = 1; i < values.length; i++) {
+    if (String(values[i][0]) === borrowingId) {
+      rowIndex = i + 1;
+      existingAttachment = String(values[i][11] || "");
+      existingToken = String(values[i][12] || "");
       break;
     }
   }
 
-  if (!targetLoan) {
-    return { success: false, error: "Loan record not found or link has expired." };
+  if (rowIndex === -1) return { success: false, error: "Borrowing not found." };
+
+  var attachmentUrl = existingAttachment;
+  if (data.fileData && data.fileName) {
+    attachmentUrl = saveFileToDrive(data.fileData, data.fileName, data.mimeType);
   }
 
-  var props = PropertiesService.getScriptProperties();
+  var portalToken = existingToken || ("bport_" + Utilities.getUuid().replace(/-/g, "").substring(0, 16));
+  var nowIso = Utilities.formatDate(new Date(), TIMEZONE, "yyyy-MM-dd'T'HH:mm:ss'Z'");
+
+  sheet.getRange(rowIndex, 2).setValue(lenderName);
+  sheet.getRange(rowIndex, 3).setValue(amount);
+  sheet.getRange(rowIndex, 4).setValue(dateTaken);
+  sheet.getRange(rowIndex, 5).setValue(expectedReturnDate);
+  sheet.getRange(rowIndex, 6).setValue(contact);
+  sheet.getRange(rowIndex, 7).setValue(notes);
+  sheet.getRange(rowIndex, 9).setValue(nowIso);
+  sheet.getRange(rowIndex, 10).setValue(interestRate);
+  sheet.getRange(rowIndex, 11).setValue(interestType);
+  sheet.getRange(rowIndex, 12).setValue(attachmentUrl);
+  sheet.getRange(rowIndex, 13).setValue(portalToken);
+
+  return { success: true, message: "Borrowing updated successfully." };
+}
+
+/**
+ * Deletes a borrowing record and cascades to delete all associated borrow payments
+ */
+function handleDeleteBorrowing(data) {
+  var borrowingId = (data.borrowing_id || "").toString().trim();
+  if (!borrowingId) return { success: false, error: "Borrowing ID is required." };
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var borrowingsSheet = ss.getSheetByName(SHEET_BORROWINGS);
+  var borrowPaymentsSheet = ss.getSheetByName(SHEET_BORROW_PAYMENTS);
+
+  var borrowingValues = borrowingsSheet.getDataRange().getValues();
+  for (var i = borrowingValues.length - 1; i >= 1; i--) {
+    if (String(borrowingValues[i][0]) === borrowingId) {
+      borrowingsSheet.deleteRow(i + 1);
+      break;
+    }
+  }
+
+  // Cascade delete associated borrow payments
+  var borrowPaymentValues = borrowPaymentsSheet.getDataRange().getValues();
+  for (var j = borrowPaymentValues.length - 1; j >= 1; j--) {
+    if (String(borrowPaymentValues[j][1]) === borrowingId) {
+      borrowPaymentsSheet.deleteRow(j + 1);
+    }
+  }
+
+  return { success: true, message: "Borrowing and related payments removed." };
+}
+
+/**
+ * Records a repayment you made to a lender (with receipt file upload & balance validation)
+ */
+function handleAddBorrowPayment(data) {
+  var borrowingId = (data.borrowing_id || "").toString().trim();
+  var amount = Number(data.amount);
+  var paymentDate = (data.payment_date || "").toString().trim();
+  var notes = (data.notes || "").toString().trim();
+
+  if (!borrowingId) return { success: false, error: "Borrowing ID is required." };
+  if (!amount || isNaN(amount) || amount <= 0) return { success: false, error: "Payment amount must be greater than 0." };
+  if (!paymentDate) paymentDate = Utilities.formatDate(new Date(), TIMEZONE, "yyyy-MM-dd");
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var borrowingsSheet = ss.getSheetByName(SHEET_BORROWINGS);
+  var borrowPaymentsSheet = ss.getSheetByName(SHEET_BORROW_PAYMENTS);
+
+  var borrowingValues = borrowingsSheet.getDataRange().getValues();
+  var borrowingRow = null;
+  for (var i = 1; i < borrowingValues.length; i++) {
+    if (String(borrowingValues[i][0]) === borrowingId) {
+      borrowingRow = borrowingValues[i];
+      break;
+    }
+  }
+
+  if (!borrowingRow) return { success: false, error: "Borrowing not found." };
+
+  var principalAmount = Number(borrowingRow[2]) || 0;
+  var dateTaken = borrowingRow[3];
+  var dateTakenStr = (dateTaken instanceof Date) ? Utilities.formatDate(dateTaken, TIMEZONE, "yyyy-MM-dd") : String(dateTaken || "").substring(0, 10);
+  var interestRate = Number(borrowingRow[9]) || 0;
+  var interestType = String(borrowingRow[10] || "none").trim();
+
+  var existingPayments = borrowPaymentsSheet.getDataRange().getValues();
+  var totalAlreadyRepaid = 0;
+  for (var p = 1; p < existingPayments.length; p++) {
+    if (String(existingPayments[p][1]) === borrowingId) {
+      totalAlreadyRepaid += Number(existingPayments[p][2]) || 0;
+    }
+  }
+
+  var todayStr = Utilities.formatDate(new Date(), TIMEZONE, "yyyy-MM-dd");
+  var accruedInterest = computeAccruedInterest(principalAmount, interestRate, interestType, dateTakenStr, todayStr);
+  var totalPayable = principalAmount + accruedInterest;
+  var currentBalance = Math.round((totalPayable - totalAlreadyRepaid) * 100) / 100;
+
+  if (amount > (currentBalance + 0.05)) {
+    return {
+      success: false,
+      error: "Payment (₹" + amount + ") exceeds remaining balance (₹" + currentBalance + ")."
+    };
+  }
+
+  var receiptUrl = "";
+  if (data.fileData && data.fileName) {
+    receiptUrl = saveFileToDrive(data.fileData, data.fileName, data.mimeType);
+  }
+
+  var borrowPaymentId = "bpay_" + new Date().getTime() + "_" + Math.floor(Math.random() * 10000);
+  var nowIso = Utilities.formatDate(new Date(), TIMEZONE, "yyyy-MM-dd'T'HH:mm:ss'Z'");
+
+  borrowPaymentsSheet.appendRow([
+    borrowPaymentId,
+    borrowingId,
+    amount,
+    paymentDate,
+    notes,
+    nowIso,
+    receiptUrl
+  ]);
+
   return {
     success: true,
-    data: {
-      loan: targetLoan,
-      lender_name: props.getProperty("LENDER_NAME") || "Personal Lender",
-      lender_upi: props.getProperty("UPI_ID") || ""
-    }
+    borrow_payment_id: borrowPaymentId,
+    receipt_url: receiptUrl,
+    message: "Borrow payment recorded successfully."
   };
+}
+
+/**
+ * Deletes a borrow payment record
+ */
+function handleDeleteBorrowPayment(data) {
+  var borrowPaymentId = (data.borrow_payment_id || "").toString().trim();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var borrowPaymentsSheet = ss.getSheetByName(SHEET_BORROW_PAYMENTS);
+  var values = borrowPaymentsSheet.getDataRange().getValues();
+
+  for (var i = values.length - 1; i >= 1; i--) {
+    if (String(values[i][0]) === borrowPaymentId) {
+      borrowPaymentsSheet.deleteRow(i + 1);
+      return { success: true, message: "Borrow payment removed." };
+    }
+  }
+  return { success: false, error: "Borrow payment not found." };
+}
+
+/**
+ * ==============================================================================
+ * BORROWER/LENDER PORTAL PUBLIC FETCHER (Secured by unguessable portal token)
+ * Works for both Loan portal tokens (port_...) and Borrowing portal tokens (bport_...)
+ * ==============================================================================
+ */
+function handleGetPortalData(portalToken) {
+  var allData = fetchAllData();
+  var props = PropertiesService.getScriptProperties();
+
+  // Check Loans first (portal tokens starting with "port_")
+  var loans = allData.loans;
+  for (var i = 0; i < loans.length; i++) {
+    if (loans[i].portal_token === portalToken) {
+      return {
+        success: true,
+        type: "loan",
+        data: {
+          loan: loans[i],
+          lender_name: props.getProperty("LENDER_NAME") || "Personal Lender",
+          lender_upi: props.getProperty("UPI_ID") || ""
+        }
+      };
+    }
+  }
+
+  // Check Borrowings (portal tokens starting with "bport_")
+  var borrowings = allData.borrowings;
+  for (var j = 0; j < borrowings.length; j++) {
+    if (borrowings[j].portal_token === portalToken) {
+      return {
+        success: true,
+        type: "borrowing",
+        data: {
+          borrowing: borrowings[j],
+          lender_name: props.getProperty("LENDER_NAME") || "Personal Lender",
+          lender_upi: props.getProperty("UPI_ID") || ""
+        }
+      };
+    }
+  }
+
+  return { success: false, error: "Record not found or link has expired." };
 }
 
 /**
  * ==============================================================================
  * AUTOMATED TIME-DRIVEN REMINDERS
+ * Checks both Loans (money to receive back) and Borrowings (money you need to return)
  * ==============================================================================
  */
 function sendDailyDueDateReminders() {
   ensureSheets();
   var dataObj = fetchAllData();
   var loans = dataObj.loans;
+  var borrowings = dataObj.borrowings;
   var todayStr = dataObj.summary.today;
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -798,6 +1292,7 @@ function sendDailyDueDateReminders() {
     }
   }
 
+  // ---- Process Loan reminders (money lent OUT, awaiting repayment) ----
   var dueTodayList = [];
   var dueIn1DayList = [];
   var dueIn3DaysList = [];
@@ -836,7 +1331,48 @@ function sendDailyDueDateReminders() {
     }
   }
 
-  var totalAlerts = dueTodayList.length + dueIn1DayList.length + dueIn3DaysList.length + overdueList.length;
+  // ---- Process Borrowing reminders (money borrowed IN, you need to return) ----
+  var bDueTodayList = [];
+  var bDueIn1DayList = [];
+  var bDueIn3DaysList = [];
+  var bOverdueList = [];
+
+  for (var bi = 0; bi < borrowings.length; bi++) {
+    var borrowing = borrowings[bi];
+    if (borrowing.status === "Completed" || !borrowing.expected_return_date) continue;
+
+    var bDaysUntilDue = borrowing.days_until_due;
+    var bId = borrowing.borrowing_id;
+
+    if (bDaysUntilDue === 0) {
+      var bKey0 = todayStr + "_" + bId + "_BORROW_DUE_TODAY";
+      if (!sentTodaySet[bKey0]) {
+        bDueTodayList.push(borrowing);
+        logsToAppend.push(["log_" + new Date().getTime() + "_b" + bi, todayStr, bId, "BORROW_DUE_TODAY", new Date().toISOString()]);
+      }
+    } else if (bDaysUntilDue === 1) {
+      var bKey1 = todayStr + "_" + bId + "_BORROW_DUE_IN_1";
+      if (!sentTodaySet[bKey1]) {
+        bDueIn1DayList.push(borrowing);
+        logsToAppend.push(["log_" + new Date().getTime() + "_b" + bi, todayStr, bId, "BORROW_DUE_IN_1", new Date().toISOString()]);
+      }
+    } else if (bDaysUntilDue === 3) {
+      var bKey3 = todayStr + "_" + bId + "_BORROW_DUE_IN_3";
+      if (!sentTodaySet[bKey3]) {
+        bDueIn3DaysList.push(borrowing);
+        logsToAppend.push(["log_" + new Date().getTime() + "_b" + bi, todayStr, bId, "BORROW_DUE_IN_3", new Date().toISOString()]);
+      }
+    } else if (bDaysUntilDue < 0) {
+      var bKeyOver = todayStr + "_" + bId + "_BORROW_OVERDUE";
+      if (!sentTodaySet[bKeyOver]) {
+        bOverdueList.push(borrowing);
+        logsToAppend.push(["log_" + new Date().getTime() + "_b" + bi, todayStr, bId, "BORROW_OVERDUE", new Date().toISOString()]);
+      }
+    }
+  }
+
+  var totalAlerts = dueTodayList.length + dueIn1DayList.length + dueIn3DaysList.length + overdueList.length
+    + bDueTodayList.length + bDueIn1DayList.length + bDueIn3DaysList.length + bOverdueList.length;
   if (totalAlerts === 0) return;
 
   function formatInr(val) {
@@ -849,7 +1385,7 @@ function sendDailyDueDateReminders() {
   htmlBody += "<p style='margin: 4px 0 0; font-size: 13px; opacity: 0.9;'>Date: " + todayStr + " (IST)</p>";
   htmlBody += "</div><div style='background: #ffffff; padding: 20px; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 8px 8px;'>";
 
-  function renderSection(title, list, badgeColor, badgeText) {
+  function renderLoanSection(title, list, badgeColor, badgeText) {
     if (list.length === 0) return "";
     var s = "<h3 style='margin: 18px 0 10px; font-size: 16px; border-bottom: 2px solid #f1f5f9; padding-bottom: 6px;'>" + title + " (" + list.length + ")</h3>";
     for (var j = 0; j < list.length; j++) {
@@ -869,16 +1405,50 @@ function sendDailyDueDateReminders() {
     return s;
   }
 
-  htmlBody += renderSection("⚠️ Overdue Loans", overdueList, "#dc2626", "OVERDUE");
-  htmlBody += renderSection("📅 Due Today", dueTodayList, "#ea580c", "DUE TODAY");
-  htmlBody += renderSection("⏳ Due Tomorrow (in 1 day)", dueIn1DayList, "#ca8a04", "1 DAY LEFT");
-  htmlBody += renderSection("🔔 Due in 3 Days", dueIn3DaysList, "#2563eb", "3 DAYS LEFT");
+  function renderBorrowingSection(title, list, badgeColor, badgeText) {
+    if (list.length === 0) return "";
+    var s = "<h3 style='margin: 18px 0 10px; font-size: 16px; border-bottom: 2px solid #f1f5f9; padding-bottom: 6px;'>" + title + " (" + list.length + ")</h3>";
+    for (var j = 0; j < list.length; j++) {
+      var item = list[j];
+      s += "<div style='background: #fefce8; border-left: 4px solid " + badgeColor + "; padding: 12px 16px; margin-bottom: 10px; border-radius: 4px;'>";
+      s += "<div style='display: flex; justify-content: space-between;'><strong>" + item.lender_name + "</strong><span style='color: " + badgeColor + "; font-weight: bold;'>" + badgeText + "</span></div>";
+      s += "<div style='font-size: 13px; color: #475569; margin-top: 6px;'>";
+      s += "<div><strong>Amount to Return:</strong> " + formatInr(item.remaining_balance);
+      if (item.accrued_interest > 0) {
+        s += " (Includes " + formatInr(item.accrued_interest) + " accrued interest)";
+      }
+      s += "</div><div><strong>Due Date:</strong> " + item.expected_return_date + "</div>";
+      if (item.phone_or_email) s += "<div><strong>Contact:</strong> " + item.phone_or_email + "</div>";
+      if (item.notes) s += "<div><strong>Note:</strong> " + item.notes + "</div>";
+      s += "</div></div>";
+    }
+    return s;
+  }
+
+  // Loans section (money lent out)
+  if (overdueList.length + dueTodayList.length + dueIn1DayList.length + dueIn3DaysList.length > 0) {
+    htmlBody += "<h2 style='font-size: 18px; color: #1d4ed8; margin-top: 0;'>💰 Loans — Money Lent Out</h2>";
+    htmlBody += renderLoanSection("⚠️ Overdue Loans", overdueList, "#dc2626", "OVERDUE");
+    htmlBody += renderLoanSection("📅 Due Today", dueTodayList, "#ea580c", "DUE TODAY");
+    htmlBody += renderLoanSection("⏳ Due Tomorrow (in 1 day)", dueIn1DayList, "#ca8a04", "1 DAY LEFT");
+    htmlBody += renderLoanSection("🔔 Due in 3 Days", dueIn3DaysList, "#2563eb", "3 DAYS LEFT");
+  }
+
+  // Borrowings section (money you need to return)
+  if (bOverdueList.length + bDueTodayList.length + bDueIn1DayList.length + bDueIn3DaysList.length > 0) {
+    htmlBody += "<h2 style='font-size: 18px; color: #92400e; margin-top: 20px;'>🏦 Borrowings — Money You Need to Return</h2>";
+    htmlBody += renderBorrowingSection("⚠️ Overdue Borrowings", bOverdueList, "#dc2626", "OVERDUE");
+    htmlBody += renderBorrowingSection("📅 Due Today", bDueTodayList, "#ea580c", "DUE TODAY");
+    htmlBody += renderBorrowingSection("⏳ Due Tomorrow (in 1 day)", bDueIn1DayList, "#ca8a04", "1 DAY LEFT");
+    htmlBody += renderBorrowingSection("🔔 Due in 3 Days", bDueIn3DaysList, "#2563eb", "3 DAYS LEFT");
+  }
+
   htmlBody += "</div></div>";
 
   var recipient = getNotificationEmail();
   MailApp.sendEmail({
     to: recipient,
-    subject: "🔔 Lend Tracker: " + totalAlerts + " loan repayment(s) need attention",
+    subject: "🔔 Lend Tracker: " + totalAlerts + " repayment(s) need attention",
     htmlBody: htmlBody
   });
 

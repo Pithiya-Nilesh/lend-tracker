@@ -155,6 +155,13 @@
       </div>
     </header>
 
+    <!-- ===== MODE SWITCHER (below header, above setup-banner) ===== -->
+    <div id="mode-switcher" class="mode-switcher">
+      <button class="mode-btn active" data-mode="lend">💰 Lending</button>
+      <button class="mode-btn" data-mode="overview">⚖️ Net Overview</button>
+      <button class="mode-btn" data-mode="borrow">🏦 Borrowing</button>
+    </div>
+
     <!-- Setup Alert (Shown if Web App URL or passcode is missing) -->
     <div id="setup-banner" class="setup-banner hidden">
       <div class="banner-content">
@@ -164,176 +171,435 @@
       <button id="open-setup-btn" class="btn btn-sm btn-primary">Configure Now</button>
     </div>
 
-    <!-- Main Container -->
-    <main class="main-container">
-      <!-- Tab Navigation -->
-      <nav class="nav-tabs" aria-label="Views">
-        <button class="tab-btn active" data-tab="tab-dashboard">
-          <span class="tab-icon">📊</span>
-          <span>Dashboard</span>
-        </button>
-        <button class="tab-btn" data-tab="tab-loans">
-          <span class="tab-icon">📋</span>
-          <span>Loans</span>
-          <span class="badge-count" id="loans-tab-count">0</span>
-        </button>
-        <button class="tab-btn" data-tab="tab-people">
-          <span class="tab-icon">👥</span>
-          <span>People</span>
-        </button>
-      </nav>
+    <!-- ================================================================= -->
+    <!-- LEND MODE VIEW (default) -->
+    <!-- ================================================================= -->
+    <div id="lend-app-view">
+      <!-- Main Container -->
+      <main class="main-container">
+        <!-- Tab Navigation -->
+        <nav class="nav-tabs" aria-label="Views">
+          <button class="tab-btn active" data-tab="tab-dashboard">
+            <span class="tab-icon">📊</span>
+            <span>Dashboard</span>
+          </button>
+          <button class="tab-btn" data-tab="tab-loans">
+            <span class="tab-icon">📋</span>
+            <span>Loans</span>
+            <span class="badge-count" id="loans-tab-count">0</span>
+          </button>
+          <button class="tab-btn" data-tab="tab-people">
+            <span class="tab-icon">👥</span>
+            <span>People</span>
+          </button>
+        </nav>
 
-      <!-- TAB 1: DASHBOARD -->
-      <section id="tab-dashboard" class="tab-content active">
-        <!-- High-Level Financial Summary Cards -->
-        <div class="metrics-grid">
-          <div class="metric-card lent">
-            <div class="metric-label">Total Lent</div>
-            <div class="metric-value" id="metric-total-lent">₹0</div>
-            <div class="metric-sub" id="metric-total-loans">0 Loans Recorded</div>
-          </div>
-          <div class="metric-card received">
-            <div class="metric-label">Total Received</div>
-            <div class="metric-value" id="metric-total-received">₹0</div>
-            <div class="metric-sub" id="metric-recovery-rate">0% Recovered</div>
-          </div>
-          <div class="metric-card outstanding">
-            <div class="metric-label">Outstanding Balance</div>
-            <div class="metric-value" id="metric-total-outstanding">₹0</div>
-            <div class="metric-sub" id="metric-pending-count">0 Unfinished Loans</div>
-          </div>
-        </div>
-
-        <!-- Status Pills Bar -->
-        <div class="status-summary-bar">
-          <div class="status-pill pill-overdue" data-filter="Overdue">
-            <span class="dot"></span>
-            <span class="label">Overdue</span>
-            <span class="count" id="count-overdue">0</span>
-          </div>
-          <div class="status-pill pill-pending" data-filter="Pending">
-            <span class="dot"></span>
-            <span class="label">Pending</span>
-            <span class="count" id="count-pending">0</span>
-          </div>
-          <div class="status-pill pill-partial" data-filter="Partial">
-            <span class="dot"></span>
-            <span class="label">Partial</span>
-            <span class="count" id="count-partial">0</span>
-          </div>
-          <div class="status-pill pill-completed" data-filter="Completed">
-            <span class="dot"></span>
-            <span class="label">Completed</span>
-            <span class="count" id="count-completed">0</span>
-          </div>
-        </div>
-
-        <!-- Overdue Loans Section (Priority Alert) -->
-        <div id="overdue-section" class="alert-box overdue-box hidden">
-          <div class="alert-box-header">
-            <div class="alert-title">
-              <span>🚨 Overdue Loans Needing Attention</span>
+        <!-- TAB 1: DASHBOARD -->
+        <section id="tab-dashboard" class="tab-content active">
+          <!-- High-Level Financial Summary Cards -->
+          <div class="metrics-grid">
+            <div class="metric-card lent">
+              <div class="metric-label">Total Lent</div>
+              <div class="metric-value" id="metric-total-lent">₹0</div>
+              <div class="metric-sub" id="metric-total-loans">0 Loans Recorded</div>
             </div>
-            <span class="badge badge-overdue" id="overdue-badge-count">0</span>
+            <div class="metric-card received">
+              <div class="metric-label">Total Received</div>
+              <div class="metric-value" id="metric-total-received">₹0</div>
+              <div class="metric-sub" id="metric-recovery-rate">0% Recovered</div>
+            </div>
+            <div class="metric-card outstanding">
+              <div class="metric-label">Outstanding Balance</div>
+              <div class="metric-value" id="metric-total-outstanding">₹0</div>
+              <div class="metric-sub" id="metric-pending-count">0 Unfinished Loans</div>
+            </div>
           </div>
-          <div id="overdue-list" class="compact-loan-list"></div>
-        </div>
 
-        <!-- Upcoming Due Dates (Next 14 Days) -->
-        <div class="card-section">
-          <div class="section-header">
-            <h2>📅 Upcoming Repayment Dues</h2>
-            <span class="section-sub">Due in next 14 days</span>
+          <!-- Status Pills Bar -->
+          <div class="status-summary-bar">
+            <div class="status-pill pill-overdue" data-filter="Overdue">
+              <span class="dot"></span>
+              <span class="label">Overdue</span>
+              <span class="count" id="count-overdue">0</span>
+            </div>
+            <div class="status-pill pill-pending" data-filter="Pending">
+              <span class="dot"></span>
+              <span class="label">Pending</span>
+              <span class="count" id="count-pending">0</span>
+            </div>
+            <div class="status-pill pill-partial" data-filter="Partial">
+              <span class="dot"></span>
+              <span class="label">Partial</span>
+              <span class="count" id="count-partial">0</span>
+            </div>
+            <div class="status-pill pill-completed" data-filter="Completed">
+              <span class="dot"></span>
+              <span class="label">Completed</span>
+              <span class="count" id="count-completed">0</span>
+            </div>
           </div>
-          <div id="upcoming-dues-list" class="compact-loan-list">
-            <p class="empty-state">No loans due in the next 14 days.</p>
+
+          <!-- Overdue Loans Section (Priority Alert) -->
+          <div id="overdue-section" class="alert-box overdue-box hidden">
+            <div class="alert-box-header">
+              <div class="alert-title">
+                <span>🚨 Overdue Loans Needing Attention</span>
+              </div>
+              <span class="badge badge-overdue" id="overdue-badge-count">0</span>
+            </div>
+            <div id="overdue-list" class="compact-loan-list"></div>
           </div>
-        </div>
 
-        <!-- Quick Action Buttons on Dashboard -->
-        <div class="dashboard-quick-actions">
-          <button class="btn btn-primary btn-block open-add-loan-btn">
-            ➕ Record New Loan
-          </button>
-          <button id="dash-export-csv-btn" class="btn btn-secondary btn-block">
-            📥 Quick Export to CSV
-          </button>
-        </div>
-      </section>
+          <!-- Upcoming Due Dates (Next 14 Days) -->
+          <div class="card-section">
+            <div class="section-header">
+              <h2>📅 Upcoming Repayment Dues</h2>
+              <span class="section-sub">Due in next 14 days</span>
+            </div>
+            <div id="upcoming-dues-list" class="compact-loan-list">
+              <p class="empty-state">No loans due in the next 14 days.</p>
+            </div>
+          </div>
 
-      <!-- TAB 2: ALL LOANS -->
-      <section id="tab-loans" class="tab-content">
-        <!-- Search, Filter & Sort Controls -->
-        <div class="controls-panel">
+          <!-- Quick Action Buttons on Dashboard -->
+          <div class="dashboard-quick-actions">
+            <button class="btn btn-primary btn-block open-add-loan-btn">
+              ➕ Record New Loan
+            </button>
+            <button id="dash-export-csv-btn" class="btn btn-secondary btn-block">
+              📥 Quick Export to CSV
+            </button>
+          </div>
+        </section>
+
+        <!-- TAB 2: ALL LOANS -->
+        <section id="tab-loans" class="tab-content">
+          <!-- Search, Filter & Sort Controls -->
+          <div class="controls-panel">
+            <div class="search-box">
+              <span class="search-icon">🔍</span>
+              <input type="text" id="loan-search-input" placeholder="Search by borrower name or note..." autocomplete="off">
+              <button id="clear-search-btn" class="clear-btn hidden" title="Clear search">&times;</button>
+            </div>
+
+            <div class="filters-row">
+              <div class="filter-group">
+                <label for="status-filter">Status:</label>
+                <select id="status-filter">
+                  <option value="ALL">All Statuses</option>
+                  <option value="ACTIVE">All Active (Pending + Partial)</option>
+                  <option value="Pending">Pending (0% paid)</option>
+                  <option value="Partial">Partial (Partially paid)</option>
+                  <option value="Completed">Completed (Fully paid)</option>
+                  <option value="Overdue">Overdue</option>
+                </select>
+              </div>
+
+              <div class="filter-group">
+                <label for="sort-by-select">Sort By:</label>
+                <select id="sort-by-select">
+                  <option value="date_newest">Date Given (Newest first)</option>
+                  <option value="date_oldest">Date Given (Oldest first)</option>
+                  <option value="due_date">Return Date (Soonest first)</option>
+                  <option value="amount_highest">Amount (Highest first)</option>
+                  <option value="amount_lowest">Amount (Lowest first)</option>
+                  <option value="name_asc">Borrower Name (A - Z)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Active Filter Chips Bar -->
+          <div id="active-filter-bar" class="active-filter-bar hidden">
+            <span>Filtered by: <strong id="filter-description">Active</strong></span>
+            <button id="reset-filter-btn" class="btn-link">Clear filter</button>
+          </div>
+
+          <!-- Loan Cards List Container -->
+          <div id="loans-container" class="loans-container">
+            <div class="loading-state">
+              <div class="spinner"></div>
+              <p>Loading your loans from Google Sheets...</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 3: PER-PERSON VIEW -->
+        <section id="tab-people" class="tab-content">
+          <div class="section-intro">
+            <h2>👥 Per-Person Debt Summary</h2>
+            <p>Aggregated total amount borrowed, interest, repaid, and balance owed per individual.</p>
+          </div>
           <div class="search-box">
             <span class="search-icon">🔍</span>
-            <input type="text" id="loan-search-input" placeholder="Search by borrower name or note..." autocomplete="off">
-            <button id="clear-search-btn" class="clear-btn hidden" title="Clear search">&times;</button>
+            <input type="text" id="people-search-input" placeholder="Search person..." autocomplete="off">
           </div>
-
-          <div class="filters-row">
-            <div class="filter-group">
-              <label for="status-filter">Status:</label>
-              <select id="status-filter">
-                <option value="ALL">All Statuses</option>
-                <option value="ACTIVE">All Active (Pending + Partial)</option>
-                <option value="Pending">Pending (0% paid)</option>
-                <option value="Partial">Partial (Partially paid)</option>
-                <option value="Completed">Completed (Fully paid)</option>
-                <option value="Overdue">Overdue</option>
-              </select>
-            </div>
-
-            <div class="filter-group">
-              <label for="sort-by-select">Sort By:</label>
-              <select id="sort-by-select">
-                <option value="date_newest">Date Given (Newest first)</option>
-                <option value="date_oldest">Date Given (Oldest first)</option>
-                <option value="due_date">Return Date (Soonest first)</option>
-                <option value="amount_highest">Amount (Highest first)</option>
-                <option value="amount_lowest">Amount (Lowest first)</option>
-                <option value="name_asc">Borrower Name (A - Z)</option>
-              </select>
-            </div>
+          <div id="people-container" class="people-container">
+            <!-- Rendered by app.js -->
           </div>
-        </div>
+        </section>
+      </main>
 
-        <!-- Active Filter Chips Bar -->
-        <div id="active-filter-bar" class="active-filter-bar hidden">
-          <span>Filtered by: <strong id="filter-description">Active</strong></span>
-          <button id="reset-filter-btn" class="btn-link">Clear filter</button>
-        </div>
+      <!-- Mobile Floating Action Button (FAB) for Lend Mode -->
+      <button id="mobile-add-fab" class="fab open-add-loan-btn" title="Add Loan" aria-label="Add Loan">
+        ➕
+      </button>
+    </div>
 
-        <!-- Loan Cards List Container -->
-        <div id="loans-container" class="loans-container">
-          <div class="loading-state">
-            <div class="spinner"></div>
-            <p>Loading your loans from Google Sheets...</p>
-          </div>
-        </div>
-      </section>
-
-      <!-- TAB 3: PER-PERSON VIEW -->
-      <section id="tab-people" class="tab-content">
+    <!-- ================================================================= -->
+    <!-- OVERVIEW MODE VIEW -->
+    <!-- ================================================================= -->
+    <div id="overview-app-view" class="hidden">
+      <main class="main-container">
         <div class="section-intro">
-          <h2>👥 Per-Person Debt Summary</h2>
-          <p>Aggregated total amount borrowed, interest, repaid, and balance owed per individual.</p>
+          <h2>⚖️ Net Financial Overview</h2>
+          <p>Combined view of all lending and borrowing. See your true net position at a glance.</p>
         </div>
-        <div class="search-box">
-          <span class="search-icon">🔍</span>
-          <input type="text" id="people-search-input" placeholder="Search person..." autocomplete="off">
-        </div>
-        <div id="people-container" class="people-container">
-          <!-- Rendered by app.js -->
-        </div>
-      </section>
-    </main>
 
-    <!-- Mobile Floating Action Button (FAB) -->
-    <button id="mobile-add-fab" class="fab open-add-loan-btn" title="Add Loan" aria-label="Add Loan">
-      ➕
-    </button>
-  </div>
+        <!-- Hero Net Metric Cards -->
+        <div class="overview-hero-grid">
+          <div class="net-card positive">
+            <div class="net-card-icon">💚</div>
+            <div class="net-card-label">Net Receivable</div>
+            <div class="net-card-value" id="overview-net-receivable">₹0</div>
+            <div class="net-card-sub">Others owe me</div>
+          </div>
+          <div class="net-card negative">
+            <div class="net-card-icon">🔴</div>
+            <div class="net-card-label">Net Payable</div>
+            <div class="net-card-value" id="overview-net-payable">₹0</div>
+            <div class="net-card-sub">I owe others</div>
+          </div>
+          <div class="net-card" id="overview-position-card">
+            <div class="net-card-icon">⚖️</div>
+            <div class="net-card-label">Net Position</div>
+            <div class="net-card-value" id="overview-net-position">₹0</div>
+            <div class="net-card-sub" id="overview-position-sub">Receivable − Payable</div>
+          </div>
+        </div>
+
+        <!-- Date Range Filter Bar -->
+        <div class="date-filter-bar">
+          <span class="date-filter-label">📅 Filter by Date Range:</span>
+          <div class="date-filter-inputs">
+            <input type="text" id="overview-person-filter" placeholder="Filter by person..." style="padding:6px 10px;border-radius:var(--radius-md);border:1px solid var(--border);background:var(--bg-input);color:var(--text-main);font-size:0.85rem;">
+            <input type="date" id="overview-from-date" title="From date">
+            <span>to</span>
+            <input type="date" id="overview-to-date" title="To date">
+          </div>
+          <div class="date-filter-actions">
+            <button id="overview-apply-filter" class="btn btn-primary btn-sm">Apply</button>
+            <button id="overview-reset-filter" class="btn btn-secondary btn-sm">Reset</button>
+          </div>
+        </div>
+
+        <!-- Person-wise Combined Table -->
+        <div class="card-section">
+          <div class="section-header">
+            <h2>👤 Person-wise Net Summary</h2>
+            <span class="section-sub">All parties combined</span>
+          </div>
+          <div class="people-net-table">
+            <div class="people-net-header people-net-row">
+              <span>Person</span>
+              <span>They Owe You</span>
+              <span>You Owe Them</span>
+              <span>Net</span>
+            </div>
+            <div id="overview-people-net-list">
+              <p class="empty-state">No data to display.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="card-section">
+          <div class="section-header">
+            <h2>🕒 Recent Activity</h2>
+            <span class="section-sub">Last 10 transactions</span>
+          </div>
+          <div id="overview-recent-activity" class="compact-loan-list">
+            <p class="empty-state">No recent activity.</p>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- BORROW MODE VIEW -->
+    <!-- ================================================================= -->
+    <div id="borrow-app-view" class="hidden" data-app-mode="borrow">
+      <main class="main-container">
+        <!-- Borrow Tab Navigation -->
+        <nav class="nav-tabs" aria-label="Borrow Views">
+          <button class="tab-btn active" data-tab="borrow-tab-dashboard">
+            <span class="tab-icon">📊</span>
+            <span>Dashboard</span>
+          </button>
+          <button class="tab-btn" data-tab="borrow-tab-borrowings">
+            <span class="tab-icon">📋</span>
+            <span>Borrowings</span>
+            <span class="badge-count" id="borrowings-tab-count">0</span>
+          </button>
+          <button class="tab-btn" data-tab="borrow-tab-lenders">
+            <span class="tab-icon">👥</span>
+            <span>Lenders</span>
+          </button>
+        </nav>
+
+        <!-- BORROW TAB 1: DASHBOARD -->
+        <section id="borrow-tab-dashboard" class="tab-content active">
+          <!-- Borrow Metric Cards -->
+          <div class="metrics-grid">
+            <div class="metric-card lent">
+              <div class="metric-label">Total Borrowed</div>
+              <div class="metric-value" id="borrow-metric-total-borrowed">₹0</div>
+              <div class="metric-sub" id="borrow-metric-total-count">0 Borrowings Recorded</div>
+            </div>
+            <div class="metric-card received">
+              <div class="metric-label">Total Repaid</div>
+              <div class="metric-value" id="borrow-metric-total-repaid">₹0</div>
+              <div class="metric-sub" id="borrow-metric-repaid-rate">0% Repaid</div>
+            </div>
+            <div class="metric-card outstanding">
+              <div class="metric-label">Total I Owe</div>
+              <div class="metric-value" id="borrow-metric-total-owe">₹0</div>
+              <div class="metric-sub" id="borrow-metric-pending-count">0 Pending Borrowings</div>
+            </div>
+          </div>
+
+          <!-- Borrow Status Pills Bar -->
+          <div class="status-summary-bar">
+            <div class="status-pill pill-overdue" data-borrow-filter="Overdue">
+              <span class="dot"></span>
+              <span class="label">Overdue</span>
+              <span class="count" id="borrow-count-overdue">0</span>
+            </div>
+            <div class="status-pill pill-pending" data-borrow-filter="Pending">
+              <span class="dot"></span>
+              <span class="label">Pending</span>
+              <span class="count" id="borrow-count-pending">0</span>
+            </div>
+            <div class="status-pill pill-partial" data-borrow-filter="Partial">
+              <span class="dot"></span>
+              <span class="label">Partial</span>
+              <span class="count" id="borrow-count-partial">0</span>
+            </div>
+            <div class="status-pill pill-completed" data-borrow-filter="Completed">
+              <span class="dot"></span>
+              <span class="label">Completed</span>
+              <span class="count" id="borrow-count-completed">0</span>
+            </div>
+          </div>
+
+          <!-- Overdue Borrowings Alert -->
+          <div id="borrow-overdue-section" class="alert-box overdue-box hidden">
+            <div class="alert-box-header">
+              <div class="alert-title">
+                <span>🚨 Overdue Borrowings – Repay Soon!</span>
+              </div>
+              <span class="badge badge-overdue" id="borrow-overdue-badge-count">0</span>
+            </div>
+            <div id="borrow-overdue-list" class="compact-loan-list"></div>
+          </div>
+
+          <!-- Upcoming Repayments I Need to Return -->
+          <div class="card-section">
+            <div class="section-header">
+              <h2>📅 Upcoming Repayments I Need to Make</h2>
+              <span class="section-sub">Due in next 14 days</span>
+            </div>
+            <div id="borrow-upcoming-dues-list" class="compact-loan-list">
+              <p class="empty-state">No repayments due in the next 14 days.</p>
+            </div>
+          </div>
+
+          <!-- Borrow Quick Actions -->
+          <div class="dashboard-quick-actions">
+            <button class="btn btn-primary btn-block open-add-borrowing-btn" id="dash-add-borrowing-btn">
+              ➕ Record New Borrowing
+            </button>
+            <button id="borrow-dash-export-btn" class="btn btn-secondary btn-block">
+              📥 Quick Export to CSV
+            </button>
+          </div>
+        </section>
+
+        <!-- BORROW TAB 2: ALL BORROWINGS -->
+        <section id="borrow-tab-borrowings" class="tab-content">
+          <!-- Search, Filter & Sort Controls -->
+          <div class="controls-panel">
+            <div class="search-box">
+              <span class="search-icon">🔍</span>
+              <input type="text" id="borrow-search-input" placeholder="Search by lender name or note..." autocomplete="off">
+              <button id="borrow-clear-search-btn" class="clear-btn hidden" title="Clear search">&times;</button>
+            </div>
+
+            <div class="filters-row">
+              <div class="filter-group">
+                <label for="borrow-status-filter">Status:</label>
+                <select id="borrow-status-filter">
+                  <option value="ALL">All Statuses</option>
+                  <option value="ACTIVE">All Active (Pending + Partial)</option>
+                  <option value="Pending">Pending (0% repaid)</option>
+                  <option value="Partial">Partial (Partially repaid)</option>
+                  <option value="Completed">Completed (Fully repaid)</option>
+                  <option value="Overdue">Overdue</option>
+                </select>
+              </div>
+
+              <div class="filter-group">
+                <label for="borrow-sort-by-select">Sort By:</label>
+                <select id="borrow-sort-by-select">
+                  <option value="date_newest">Date Taken (Newest first)</option>
+                  <option value="date_oldest">Date Taken (Oldest first)</option>
+                  <option value="due_date">Return Date (Soonest first)</option>
+                  <option value="amount_highest">Amount (Highest first)</option>
+                  <option value="amount_lowest">Amount (Lowest first)</option>
+                  <option value="name_asc">Lender Name (A - Z)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Borrow Active Filter Chips Bar -->
+          <div id="borrow-active-filter-bar" class="active-filter-bar hidden">
+            <span>Filtered by: <strong id="borrow-filter-description">Active</strong></span>
+            <button id="borrow-reset-filter-btn" class="btn-link">Clear filter</button>
+          </div>
+
+          <!-- Borrowings Cards List Container -->
+          <div id="borrow-loans-container" class="loans-container">
+            <div class="loading-state">
+              <div class="spinner"></div>
+              <p>Loading your borrowings...</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- BORROW TAB 3: LENDERS (Per-Lender view) -->
+        <section id="borrow-tab-lenders" class="tab-content">
+          <div class="section-intro">
+            <h2>👥 Per-Lender Summary</h2>
+            <p>Aggregated total borrowed, interest, repaid, and balance owed per lender.</p>
+          </div>
+          <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="lenders-search-input" placeholder="Search lender..." autocomplete="off">
+          </div>
+          <div id="lenders-container" class="people-container">
+            <!-- Rendered by app.js -->
+          </div>
+        </section>
+      </main>
+
+      <!-- Mobile Floating Action Button (FAB) for Borrow Mode -->
+      <button id="mobile-add-borrow-fab" class="fab fab-borrow open-add-borrowing-btn" title="Add Borrowing" aria-label="Add Borrowing">
+        ➕
+      </button>
+    </div>
+
+  </div><!-- end #admin-app-view -->
 
   <!-- ========================================================================= -->
   <!-- MODAL 1: ADD / EDIT LOAN (With Interest & Document Upload) -->
@@ -650,6 +916,9 @@
             <button type="button" id="export-payments-csv-btn" class="btn btn-secondary btn-sm">
               📥 Export Payments CSV
             </button>
+            <button type="button" id="borrow-export-csv-btn" class="btn btn-secondary btn-sm">
+              📥 Export Borrowings CSV
+            </button>
           </div>
         </div>
 
@@ -671,7 +940,7 @@
         <button class="modal-close-btn" data-close="delete-modal">&times;</button>
       </div>
       <div class="delete-warning-body">
-        <p>Are you sure you want to delete the loan for <strong id="delete-borrower-name">-</strong>?</p>
+        <p>Are you sure you want to delete the <span id="delete-record-type">loan</span> for <strong id="delete-borrower-name">-</strong>?</p>
         <p class="alert-danger-text">
           <strong>Warning:</strong> This action will permanently remove this loan and <u>all associated repayment history</u>. This cannot be undone.
         </p>
@@ -679,6 +948,235 @@
       <div class="modal-actions">
         <button type="button" class="btn btn-secondary" data-close="delete-modal">Cancel</button>
         <button type="button" id="confirm-delete-btn" class="btn btn-danger">Delete Permanently</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL 7: ADD / EDIT BORROWING -->
+  <!-- ========================================================================= -->
+  <div id="borrowing-modal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="borrowing-modal-title">Record New Borrowing</h3>
+        <button class="modal-close-btn" data-close="borrowing-modal">&times;</button>
+      </div>
+      <form id="borrowing-form">
+        <input type="hidden" id="borrowing-form-id">
+
+        <div class="form-group">
+          <label for="borrowing-lender">Lender Name <span class="req">*</span></label>
+          <input type="text" id="borrowing-lender" placeholder="e.g. Amit Patel" required autocomplete="name">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="borrowing-amount">Principal Amount (₹) <span class="req">*</span></label>
+            <input type="number" id="borrowing-amount" placeholder="e.g. 20000" min="1" step="any" required>
+          </div>
+          <div class="form-group">
+            <label for="borrowing-date-taken">Date Taken <span class="req">*</span></label>
+            <input type="date" id="borrowing-date-taken" required>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="borrowing-interest-type">Interest Type</label>
+            <select id="borrowing-interest-type">
+              <option value="none">No Interest (0%)</option>
+              <option value="simple_yearly">Simple Interest (% per year)</option>
+              <option value="simple_monthly">Simple Interest (% per month)</option>
+              <option value="fixed_amount">Fixed Amount / Fee (₹)</option>
+            </select>
+          </div>
+          <div class="form-group" id="borrowing-interest-rate-group">
+            <label for="borrowing-interest-rate" id="borrowing-interest-rate-label">Interest Rate (%)</label>
+            <input type="number" id="borrowing-interest-rate" placeholder="0" min="0" step="any" value="0">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="borrowing-return-date">Expected Return Date</label>
+            <input type="date" id="borrowing-return-date">
+            <small class="form-hint">When you need to repay this amount.</small>
+          </div>
+          <div class="form-group">
+            <label for="borrowing-contact">Lender Phone or Email</label>
+            <input type="text" id="borrowing-contact" placeholder="Phone or email of lender">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="borrowing-notes">Reason / Notes</label>
+          <textarea id="borrowing-notes" rows="2" placeholder="e.g. Borrowed for home renovation, to return in 3 months"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="borrowing-file">Attach Agreement / Receipt (Optional)</label>
+          <input type="file" id="borrowing-file" accept="image/*,application/pdf">
+          <small class="form-hint">Upload signed agreement or receipt to Google Drive.</small>
+          <div id="borrowing-file-preview" class="file-preview hidden">
+            <span id="borrowing-file-name" class="file-name"></span>
+            <button type="button" id="remove-borrowing-file-btn" class="btn-text-danger">&times; Remove</button>
+          </div>
+          <input type="hidden" id="borrowing-existing-attachment">
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" data-close="borrowing-modal">Cancel</button>
+          <button type="submit" id="borrowing-submit-btn" class="btn btn-primary">Save Borrowing</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL 8: RECORD REPAYMENT (Borrow Mode) -->
+  <!-- ========================================================================= -->
+  <div id="borrow-payment-modal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Record My Repayment</h3>
+        <button class="modal-close-btn" data-close="borrow-payment-modal">&times;</button>
+      </div>
+
+      <!-- Summary Info for this borrowing -->
+      <div class="loan-summary-banner">
+        <div class="summary-line">
+          <span>Lender:</span>
+          <strong id="borrow-pay-modal-lender">-</strong>
+        </div>
+        <div class="summary-line">
+          <span>Principal Amount:</span>
+          <strong id="borrow-pay-modal-principal">-</strong>
+        </div>
+        <div class="summary-line" id="borrow-pay-modal-interest-row">
+          <span>Accrued Interest:</span>
+          <strong class="text-warning" id="borrow-pay-modal-interest">₹0</strong>
+        </div>
+        <div class="summary-line">
+          <span>Already Repaid:</span>
+          <span class="text-success" id="borrow-pay-modal-paid">-</span>
+        </div>
+        <div class="summary-line highlight">
+          <span>Remaining Balance:</span>
+          <strong class="text-danger" id="borrow-pay-modal-balance">-</strong>
+        </div>
+      </div>
+
+      <form id="borrow-payment-form">
+        <input type="hidden" id="borrow-pay-borrowing-id">
+
+        <div class="form-group">
+          <label for="borrow-pay-amount">Repayment Amount (₹) <span class="req">*</span></label>
+          <input type="number" id="borrow-pay-amount" placeholder="Amount repaid to lender" min="1" step="any" required>
+          <div id="borrow-payment-warning" class="input-warning hidden">
+            ⚠️ Amount exceeds the remaining balance!
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="borrow-pay-date">Payment Date <span class="req">*</span></label>
+          <input type="date" id="borrow-pay-date" required>
+        </div>
+
+        <div class="form-group">
+          <label for="borrow-pay-notes">Payment Note / Mode</label>
+          <input type="text" id="borrow-pay-notes" placeholder="e.g. UPI, Cash, Installment 1">
+        </div>
+
+        <div class="form-group">
+          <label for="borrow-pay-file">Attach Payment Screenshot (Optional)</label>
+          <input type="file" id="borrow-pay-file" accept="image/*,application/pdf">
+          <small class="form-hint">Saves receipt to Google Drive and attaches to repayment timeline.</small>
+          <div id="borrow-pay-file-preview" class="file-preview hidden">
+            <span id="borrow-pay-file-name" class="file-name"></span>
+            <button type="button" id="remove-borrow-pay-file-btn" class="btn-text-danger">&times; Remove</button>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" data-close="borrow-payment-modal">Cancel</button>
+          <button type="submit" id="borrow-payment-submit-btn" class="btn btn-success">Record My Repayment</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL 9: BORROWING PAYMENT HISTORY & TIMELINE -->
+  <!-- ========================================================================= -->
+  <div id="borrow-history-modal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-box modal-lg">
+      <div class="modal-header">
+        <div>
+          <h3>Repayment History</h3>
+          <p class="modal-subtitle" id="borrow-history-subtitle">Lender Name</p>
+        </div>
+        <button class="modal-close-btn" data-close="borrow-history-modal">&times;</button>
+      </div>
+
+      <!-- Financial progress breakdown -->
+      <div class="history-metrics-card">
+        <div class="history-metric">
+          <span>Principal</span>
+          <strong id="borrow-history-principal">₹0</strong>
+        </div>
+        <div class="history-metric" id="borrow-history-interest-metric">
+          <span>Interest</span>
+          <strong class="text-warning" id="borrow-history-interest">₹0</strong>
+        </div>
+        <div class="history-metric">
+          <span>Total Repaid</span>
+          <strong class="text-success" id="borrow-history-paid">₹0</strong>
+        </div>
+        <div class="history-metric">
+          <span>Remaining</span>
+          <strong class="text-danger" id="borrow-history-balance">₹0</strong>
+        </div>
+      </div>
+
+      <!-- Visual progress bar -->
+      <div class="progress-container">
+        <div class="progress-bar" id="borrow-history-progress-bar" style="width: 0%;"></div>
+      </div>
+      <div class="progress-label" id="borrow-history-progress-text">0% repaid</div>
+
+      <!-- Timeline List -->
+      <div class="timeline-container">
+        <h4>My Repayment Timeline</h4>
+        <div id="borrow-timeline-list" class="timeline-list">
+          <!-- Rendered by app.js -->
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" data-close="borrow-history-modal">Close</button>
+        <button type="button" id="borrow-history-add-payment-btn" class="btn btn-primary">➕ Record Repayment</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL 10: CONFIRM DELETE BORROWING -->
+  <!-- ========================================================================= -->
+  <div id="delete-borrowing-modal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-box modal-sm">
+      <div class="modal-header">
+        <h3 class="text-danger">⚠️ Confirm Deletion</h3>
+        <button class="modal-close-btn" data-close="delete-borrowing-modal">&times;</button>
+      </div>
+      <div class="delete-warning-body">
+        <p>Are you sure you want to delete the borrowing from <strong id="delete-lender-name">-</strong>?</p>
+        <p class="alert-danger-text">
+          <strong>Warning:</strong> This action will permanently remove this borrowing and <u>all associated repayment history</u>. This cannot be undone.
+        </p>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" data-close="delete-borrowing-modal">Cancel</button>
+        <button type="button" id="confirm-delete-borrowing-btn" class="btn btn-danger">Delete Permanently</button>
       </div>
     </div>
   </div>
@@ -699,5 +1197,6 @@
       });
     }
   </script>
+
 </body>
 </html>
