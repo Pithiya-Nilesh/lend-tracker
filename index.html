@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Lend Tracker - Money Lent Tracker</title>
+  
+  <!-- PWA Meta Tags -->
+  <meta name="description" content="Track money lent to friends and family, record partial payments, and manage due dates.">
+  <meta name="theme-color" content="#2563eb">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="LendTracker">
+
+  <!-- Manifest & Icons -->
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" type="image/png" href="./icons/icon-192.png">
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <!-- Offline Alert Banner -->
+  <div id="offline-banner" class="offline-banner hidden">
+    <span>⚠️ You are currently offline. Showing cached records.</span>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- BORROWER PORTAL VIEW (Shown ONLY when ?portal= is in URL) -->
+  <!-- ========================================================================= -->
+  <div id="borrower-portal-view" class="portal-container hidden">
+    <div class="portal-card">
+      <div class="portal-header">
+        <div class="portal-logo">₹</div>
+        <div class="portal-header-info">
+          <h2>Loan Statement</h2>
+          <span class="portal-lender" id="portal-lender-name">Private Lender</span>
+        </div>
+        <div id="portal-status-badge" class="badge">Status</div>
+      </div>
+
+      <div class="portal-borrower-box">
+        <div class="portal-row">
+          <span>Borrower:</span>
+          <strong id="portal-borrower">-</strong>
+        </div>
+        <div class="portal-row">
+          <span>Date Given:</span>
+          <span id="portal-date-given">-</span>
+        </div>
+        <div class="portal-row">
+          <span>Expected Return:</span>
+          <span id="portal-due-date">-</span>
+        </div>
+      </div>
+
+      <!-- Financial Metrics in Portal -->
+      <div class="portal-financials">
+        <div class="portal-fin-box">
+          <span>Principal</span>
+          <strong id="portal-principal">₹0</strong>
+        </div>
+        <div class="portal-fin-box" id="portal-interest-box">
+          <span>Accrued Interest</span>
+          <strong id="portal-interest">₹0</strong>
+          <small id="portal-interest-rate" class="portal-sub">-</small>
+        </div>
+        <div class="portal-fin-box highlight">
+          <span>Outstanding Balance</span>
+          <strong class="text-danger" id="portal-balance">₹0</strong>
+        </div>
+      </div>
+
+      <!-- Repayment Progress -->
+      <div class="portal-progress-section">
+        <div class="progress-container">
+          <div class="progress-bar" id="portal-progress-bar" style="width: 0%;"></div>
+        </div>
+        <div class="portal-progress-meta">
+          <span id="portal-paid-text">₹0 paid so far</span>
+          <span id="portal-pct-text">0%</span>
+        </div>
+      </div>
+
+      <!-- Payment History Timeline -->
+      <div class="portal-section">
+        <h3>Repayment History</h3>
+        <div id="portal-payments-list" class="timeline-list">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+
+      <!-- Loan Attachment / Agreement Document (if uploaded) -->
+      <div id="portal-attachment-box" class="portal-section hidden">
+        <h3>Loan Document / Receipt</h3>
+        <div class="attachment-view-card">
+          <span>📄 Initial Agreement / Loan Slip</span>
+          <a id="portal-attachment-link" href="#" target="_blank" rel="noopener" class="btn btn-sm btn-secondary">View Document ↗</a>
+        </div>
+      </div>
+
+      <!-- UPI Payment Box (Direct Repayment) -->
+      <div id="portal-upi-box" class="portal-upi-card hidden">
+        <h4>⚡ Repay Instantly via UPI</h4>
+        <p class="upi-sub">Tap below to pay directly to lender via Google Pay, PhonePe, or Paytm</p>
+        <div class="upi-action-wrap">
+          <a id="portal-upi-btn" href="#" class="btn btn-primary btn-block">
+            Pay with UPI App
+          </a>
+        </div>
+        <div class="upi-id-display">
+          <span>UPI ID:</span>
+          <code id="portal-upi-id">-</code>
+          <button type="button" id="copy-upi-btn" class="btn-link">Copy</button>
+        </div>
+      </div>
+
+      <!-- Contact Lender on WhatsApp -->
+      <div class="portal-footer">
+        <button id="portal-contact-btn" class="btn btn-whatsapp btn-block">
+          💬 Message Lender on WhatsApp
+        </button>
+        <p class="portal-disclaimer">This statement is generated for your reference. All figures reflect verified records.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- ADMIN APP VIEW (Full Lend Tracker application for the owner) -->
+  <!-- ========================================================================= -->
+  <div id="admin-app-view">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-container">
+        <div class="brand">
+          <div class="brand-icon">₹</div>
+          <div class="brand-text">
+            <h1>Lend Tracker</h1>
+            <span class="subtext" id="header-status">Personal Finance</span>
+          </div>
+        </div>
+        <div class="header-actions">
+          <button id="theme-toggle-btn" class="icon-btn" title="Toggle Theme" aria-label="Toggle Theme">
+            <span id="theme-icon">🌙</span>
+          </button>
+          <button id="refresh-btn" class="icon-btn" title="Refresh Data" aria-label="Refresh Data">
+            🔄
+          </button>
+          <button id="settings-btn" class="icon-btn" title="Settings & Backup" aria-label="Settings">
+            ⚙️
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Setup Alert (Shown if Web App URL or passcode is missing) -->
+    <div id="setup-banner" class="setup-banner hidden">
+      <div class="banner-content">
+        <strong>⚡ Quick Setup Required</strong>
+        <p>Connect your private Google Apps Script Web App URL and Passcode to begin.</p>
+      </div>
+      <button id="open-setup-btn" class="btn btn-sm btn-primary">Configure Now</button>
+    </div>
+
+    <!-- Main Container -->
+    <main class="main-container">
+      <!-- Tab Navigation -->
+      <nav class="nav-tabs" aria-label="Views">
+        <button class="tab-btn active" data-tab="tab-dashboard">
+          <span class="tab-icon">📊</span>
+          <span>Dashboard</span>
+        </button>
+        <button class="tab-btn" data-tab="tab-loans">
+          <span class="tab-icon">📋</span>
+          <span>Loans</span>
+          <span class="badge-count" id="loans-tab-count">0</span>
+        </button>
+        <button class="tab-btn" data-tab="tab-people">
+          <span class="tab-icon">👥</span>
+          <span>People</span>
+        </button>
+      </nav>
+
+      <!-- TAB 1: DASHBOARD -->
+      <section id="tab-dashboard" class="tab-content active">
+        <!-- High-Level Financial Summary Cards -->
+        <div class="metrics-grid">
+          <div class="metric-card lent">
+            <div class="metric-label">Total Lent</div>
+            <div class="metric-value" id="metric-total-lent">₹0</div>
+            <div class="metric-sub" id="metric-total-loans">0 Loans Recorded</div>
+          </div>
+          <div class="metric-card received">
+            <div class="metric-label">Total Received</div>
+            <div class="metric-value" id="metric-total-received">₹0</div>
+            <div class="metric-sub" id="metric-recovery-rate">0% Recovered</div>
+          </div>
+          <div class="metric-card outstanding">
+            <div class="metric-label">Outstanding Balance</div>
+            <div class="metric-value" id="metric-total-outstanding">₹0</div>
+            <div class="metric-sub" id="metric-pending-count">0 Unfinished Loans</div>
+          </div>
+        </div>
+
+        <!-- Status Pills Bar -->
+        <div class="status-summary-bar">
+          <div class="status-pill pill-overdue" data-filter="Overdue">
+            <span class="dot"></span>
+            <span class="label">Overdue</span>
+            <span class="count" id="count-overdue">0</span>
+          </div>
+          <div class="status-pill pill-pending" data-filter="Pending">
+            <span class="dot"></span>
+            <span class="label">Pending</span>
+            <span class="count" id="count-pending">0</span>
+          </div>
+          <div class="status-pill pill-partial" data-filter="Partial">
+            <span class="dot"></span>
+            <span class="label">Partial</span>
+            <span class="count" id="count-partial">0</span>
+          </div>
+          <div class="status-pill pill-completed" data-filter="Completed">
+            <span class="dot"></span>
+            <span class="label">Completed</span>
+            <span class="count" id="count-completed">0</span>
+          </div>
+        </div>
+
+        <!-- Overdue Loans Section (Priority Alert) -->
+        <div id="overdue-section" class="alert-box overdue-box hidden">
+          <div class="alert-box-header">
+            <div class="alert-title">
+              <span>🚨 Overdue Loans Needing Attention</span>
+            </div>
+            <span class="badge badge-overdue" id="overdue-badge-count">0</span>
+          </div>
+          <div id="overdue-list" class="compact-loan-list"></div>
+        </div>
+
+        <!-- Upcoming Due Dates (Next 14 Days) -->
+        <div class="card-section">
+          <div class="section-header">
+            <h2>📅 Upcoming Repayment Dues</h2>
+            <span class="section-sub">Due in next 14 days</span>
+          </div>
+          <div id="upcoming-dues-list" class="compact-loan-list">
+            <p class="empty-state">No loans due in the next 14 days.</p>
+          </div>
+        </div>
+
+        <!-- Quick Action Buttons on Dashboard -->
+        <div class="dashboard-quick-actions">
+          <button class="btn btn-primary btn-block open-add-loan-btn">
+            ➕ Record New Loan
+          </button>
+          <button id="dash-export-csv-btn" class="btn btn-secondary btn-block">
+            📥 Quick Export to CSV
+          </button>
+        </div>
+      </section>
+
+      <!-- TAB 2: ALL LOANS -->
+      <section id="tab-loans" class="tab-content">
+        <!-- Search, Filter & Sort Controls -->
+        <div class="controls-panel">
+          <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="loan-search-input" placeholder="Search by borrower name or note..." autocomplete="off">
+            <button id="clear-search-btn" class="clear-btn hidden" title="Clear search">&times;</button>
+          </div>
+
+          <div class="filters-row">
+            <div class="filter-group">
+              <label for="status-filter">Status:</label>
+              <select id="status-filter">
+                <option value="ALL">All Statuses</option>
+                <option value="ACTIVE">All Active (Pending + Partial)</option>
+                <option value="Pending">Pending (0% paid)</option>
+                <option value="Partial">Partial (Partially paid)</option>
+                <option value="Completed">Completed (Fully paid)</option>
+                <option value="Overdue">Overdue</option>
+              </select>
+            </div>
+
+            <div class="filter-group">
+              <label for="sort-by-select">Sort By:</label>
+              <select id="sort-by-select">
+                <option value="date_newest">Date Given (Newest first)</option>
+                <option value="date_oldest">Date Given (Oldest first)</option>
+                <option value="due_date">Return Date (Soonest first)</option>
+                <option value="amount_highest">Amount (Highest first)</option>
+                <option value="amount_lowest">Amount (Lowest first)</option>
+                <option value="name_asc">Borrower Name (A - Z)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Active Filter Chips Bar -->
+        <div id="active-filter-bar" class="active-filter-bar hidden">
+          <span>Filtered by: <strong id="filter-description">Active</strong></span>
+          <button id="reset-filter-btn" class="btn-link">Clear filter</button>
+        </div>
+
+        <!-- Loan Cards List Container -->
+        <div id="loans-container" class="loans-container">
+          <div class="loading-state">
+            <div class="spinner"></div>
+            <p>Loading your loans from Google Sheets...</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: PER-PERSON VIEW -->
+      <section id="tab-people" class="tab-content">
+        <div class="section-intro">
+          <h2>👥 Per-Person Debt Summary</h2>
+          <p>Aggregated total amount borrowed, interest, repaid, and balance owed per individual.</p>
+        </div>
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="people-search-input" placeholder="Search person..." autocomplete="off">
+        </div>
+        <div id="people-container" class="people-container">
+          <!-- Rendered by app.js -->
+        </div>
+      </section>
+    </main>
+
+    <!-- Mobile Floating Action Button (FAB) -->
+    <button id="mobile-add-fab" class="fab open-add-loan-btn" title="Add Loan" aria-label="Add Loan">
+      ➕
+    </button>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL 1: ADD / EDIT LOAN (With Interest & Document Upload) -->
+  <!-- ========================================================================= -->
+  <div id="loan-modal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="loan-modal-title">Record New Loan</h3>
+        <button class="modal-close-btn" data-close="loan-modal">&times;</button>
+      </div>
+      <form id="loan-form">
+        <input type="hidden" id="loan-form-id">
+
+        <div class="form-group">
+          <label for="loan-borrower">Borrower Name <span class="req">*</span></label>
+          <input type="text" id="loan-borrower" placeholder="e.g. Rahul Sharma" required autocomplete="name">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="loan-amount">Principal Amount (₹) <span class="req">*</span></label>
+            <input type="number" id="loan-amount" placeholder="e.g. 50000" min="1" step="any" required>
+          </div>
+          <div class="form-group">
+            <label for="loan-date-given">Date Given <span class="req">*</span></label>
+            <input type="date" id="loan-date-given" required>
+          </div>
+        </div>
+
+        <!-- 1. Interest Calculation Controls -->
+        <div class="form-row">
+          <div class="form-group">
+            <label for="loan-interest-type">Interest Type</label>
+            <select id="loan-interest-type">
+              <option value="none">No Interest (0%)</option>
+              <option value="simple_yearly">Simple Interest (% per year)</option>
+              <option value="simple_monthly">Simple Interest (% per month)</option>
+              <option value="fixed_amount">Fixed Amount / Fee (₹)</option>
+            </select>
+          </div>
+          <div class="form-group" id="interest-rate-group">
+            <label for="loan-interest-rate" id="interest-rate-label">Interest Rate (%)</label>
+            <input type="number" id="loan-interest-rate" placeholder="0" min="0" step="any" value="0">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="loan-return-date">Expected Return Date</label>
+            <input type="date" id="loan-return-date">
+            <small class="form-hint">Used for due date email reminders.</small>
+          </div>
+          <div class="form-group">
+            <label for="loan-contact">Phone or Email</label>
+            <input type="text" id="loan-contact" placeholder="Phone or email (for WhatsApp reminder)">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="loan-notes">Reason / Notes</label>
+          <textarea id="loan-notes" rows="2" placeholder="e.g. Emergency medical expense, promised back in 2 installments"></textarea>
+        </div>
+
+        <!-- 3. Document / Agreement Attachment -->
+        <div class="form-group">
+          <label for="loan-file">Attach Agreement / Loan Receipt (Optional)</label>
+          <input type="file" id="loan-file" accept="image/*,application/pdf">
+          <small class="form-hint">Upload signed promissory note, check photo, or agreement to Google Drive.</small>
+          <div id="loan-file-preview" class="file-preview hidden">
+            <span id="loan-file-name" class="file-name"></span>
+            <button type="button" id="remove-loan-file-btn" class="btn-text-danger">&times; Remove</button>
+          </div>
+          <input type="hidden" id="loan-existing-attachment">
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" data-close="loan-modal">Cancel</button>
+          <button type="submit" id="loan-submit-btn" class="btn btn-primary">Save Loan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL 2: ADD PAYMENT (With Receipt Upload & Balance Check) -->
+  <!-- ========================================================================= -->
+  <div id="payment-modal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Record Repayment</h3>
+        <button class="modal-close-btn" data-close="payment-modal">&times;</button>
+      </div>
+
+      <!-- Summary Info for this loan -->
+      <div class="loan-summary-banner">
+        <div class="summary-line">
+          <span>Borrower:</span>
+          <strong id="pay-modal-borrower">-</strong>
+        </div>
+        <div class="summary-line">
+          <span>Principal Amount:</span>
+          <strong id="pay-modal-principal">-</strong>
+        </div>
+        <div class="summary-line" id="pay-modal-interest-row">
+          <span>Accrued Interest:</span>
+          <strong class="text-warning" id="pay-modal-interest">₹0</strong>
+        </div>
+        <div class="summary-line">
+          <span>Already Paid:</span>
+          <span class="text-success" id="pay-modal-paid">-</span>
+        </div>
+        <div class="summary-line highlight">
+          <span>Remaining Balance:</span>
+          <strong class="text-danger" id="pay-modal-balance">-</strong>
+        </div>
+      </div>
+
+      <form id="payment-form">
+        <input type="hidden" id="pay-loan-id">
+
+        <div class="form-group">
+          <label for="pay-amount">Payment Amount (₹) <span class="req">*</span></label>
+          <input type="number" id="pay-amount" placeholder="Amount repaid" min="1" step="any" required>
+          <div id="payment-warning" class="input-warning hidden">
+            ⚠️ Amount exceeds the remaining balance!
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="pay-date">Payment Date <span class="req">*</span></label>
+          <input type="date" id="pay-date" required>
+        </div>
+
+        <div class="form-group">
+          <label for="pay-notes">Payment Note / Mode</label>
+          <input type="text" id="pay-notes" placeholder="e.g. Google Pay, Cash, Partial installment 1">
+        </div>
+
+        <!-- 3. Payment Receipt Upload -->
+        <div class="form-group">
+          <label for="pay-file">Attach UPI / Payment Screenshot (Optional)</label>
+          <input type="file" id="pay-file" accept="image/*,application/pdf">
+          <small class="form-hint">Saves screenshot/receipt to Google Drive and attaches to timeline.</small>
+          <div id="pay-file-preview" class="file-preview hidden">
+            <span id="pay-file-name" class="file-name"></span>
+            <button type="button" id="remove-pay-file-btn" class="btn-text-danger">&times; Remove</button>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" data-close="payment-modal">Cancel</button>
+          <button type="submit" id="payment-submit-btn" class="btn btn-success">Record Repayment</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL 3: PAYMENT HISTORY & TIMELINE (With Receipt Links) -->
+  <!-- ========================================================================= -->
+  <div id="history-modal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-box modal-lg">
+      <div class="modal-header">
+        <div>
+          <h3>Payment History</h3>
+          <p class="modal-subtitle" id="history-loan-subtitle">Rahul Sharma</p>
+        </div>
+        <button class="modal-close-btn" data-close="history-modal">&times;</button>
+      </div>
+
+      <!-- Financial progress breakdown -->
+      <div class="history-metrics-card">
+        <div class="history-metric">
+          <span>Principal</span>
+          <strong id="history-principal">₹0</strong>
+        </div>
+        <div class="history-metric" id="history-interest-metric">
+          <span>Interest</span>
+          <strong class="text-warning" id="history-interest">₹0</strong>
+        </div>
+        <div class="history-metric">
+          <span>Total Paid</span>
+          <strong class="text-success" id="history-paid">₹0</strong>
+        </div>
+        <div class="history-metric">
+          <span>Remaining</span>
+          <strong class="text-danger" id="history-balance">₹0</strong>
+        </div>
+      </div>
+
+      <!-- Visual progress bar -->
+      <div class="progress-container">
+        <div class="progress-bar" id="history-progress-bar" style="width: 0%;"></div>
+      </div>
+      <div class="progress-label" id="history-progress-text">0% paid</div>
+
+      <!-- Timeline List -->
+      <div class="timeline-container">
+        <h4>Repayment Timeline</h4>
+        <div id="timeline-list" class="timeline-list">
+          <!-- Rendered by app.js -->
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" data-close="history-modal">Close</button>
+        <button type="button" id="history-add-payment-btn" class="btn btn-primary">➕ Add Payment</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL 4: SHARE BORROWER PORTAL LINK -->
+  <!-- ========================================================================= -->
+  <div id="portal-share-modal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>🔗 Share Borrower Statement</h3>
+        <button class="modal-close-btn" data-close="portal-share-modal">&times;</button>
+      </div>
+      <div class="portal-share-body">
+        <p>Give this link to <strong id="portal-share-name">-</strong> to let them view their live loan balance, payment history, and UPI payment link anytime without seeing your other records:</p>
+        
+        <div class="share-url-box">
+          <input type="text" id="portal-share-url-input" readonly>
+          <button type="button" id="copy-portal-url-btn" class="btn btn-primary btn-sm">Copy Link</button>
+        </div>
+
+        <div class="portal-share-actions">
+          <button type="button" id="whatsapp-share-portal-btn" class="btn btn-whatsapp btn-block">
+            💬 Send Statement on WhatsApp
+          </button>
+          <button type="button" id="preview-portal-btn" class="btn btn-secondary btn-block">
+            👁️ Open Live Preview
+          </button>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" data-close="portal-share-modal">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL 5: SETTINGS & BACKUP (With UPI & Lender Name) -->
+  <!-- ========================================================================= -->
+  <div id="settings-modal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>⚙️ App Settings & API Connection</h3>
+        <button class="modal-close-btn" data-close="settings-modal">&times;</button>
+      </div>
+
+      <form id="settings-form">
+        <div class="settings-section">
+          <h4>Google Apps Script API</h4>
+          <p class="settings-help">
+            Deploy your Google Sheet script as a Web App and paste your URL and passcode below.
+          </p>
+
+          <div class="form-group">
+            <label for="setting-webapp-url">Web App URL <span class="req">*</span></label>
+            <input type="url" id="setting-webapp-url" placeholder="https://script.google.com/macros/s/.../exec" required autocomplete="off">
+            <small class="form-hint">Must end with <code>/exec</code></small>
+          </div>
+
+          <div class="form-group">
+            <label for="setting-passcode">Security Passcode <span class="req">*</span></label>
+            <div class="password-input-wrapper">
+              <input type="password" id="setting-passcode" placeholder="Your strong secret PIN/Passcode" required autocomplete="current-password">
+              <button type="button" id="toggle-passcode-visibility" class="btn-text-icon" title="Show/Hide">👁️</button>
+            </div>
+            <small class="form-hint">Stored securely on your device only. Never committed to GitHub.</small>
+          </div>
+
+          <button type="button" id="test-connection-btn" class="btn btn-secondary btn-sm">
+            🔌 Test Connection
+          </button>
+          <span id="test-result" class="test-result"></span>
+        </div>
+
+        <div class="settings-section">
+          <h4>Borrower Portal & Payment Info</h4>
+          <div class="form-group">
+            <label for="setting-lender-name">Your Display Name (shown to borrowers)</label>
+            <input type="text" id="setting-lender-name" placeholder="e.g. Nilesh Pithiya">
+          </div>
+          <div class="form-group">
+            <label for="setting-upi-id">Your UPI ID (for 1-click repayments on borrower portal)</label>
+            <input type="text" id="setting-upi-id" placeholder="e.g. username@okhdfcbank or 9876543210@paytm">
+            <small class="form-hint">Borrowers can tap a button on their portal to repay directly to this UPI ID.</small>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <h4>Preferences</h4>
+          <div class="form-group">
+            <label for="setting-currency">Currency Symbol</label>
+            <input type="text" id="setting-currency" value="₹" maxlength="5">
+          </div>
+          <div class="form-group">
+            <label>Timezone & Date Format</label>
+            <input type="text" value="Asia/Kolkata (DD/MM/YYYY)" disabled class="input-disabled">
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <h4>Export & Backup Data</h4>
+          <p class="settings-help">Download all your records to keep offline copies anytime.</p>
+          <div class="button-group-wrap">
+            <button type="button" id="export-loans-csv-btn" class="btn btn-secondary btn-sm">
+              📥 Export Loans CSV
+            </button>
+            <button type="button" id="export-payments-csv-btn" class="btn btn-secondary btn-sm">
+              📥 Export Payments CSV
+            </button>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" data-close="settings-modal">Close</button>
+          <button type="submit" class="btn btn-primary">Save Settings</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL 6: CONFIRM DELETE -->
+  <!-- ========================================================================= -->
+  <div id="delete-modal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-box modal-sm">
+      <div class="modal-header">
+        <h3 class="text-danger">⚠️ Confirm Deletion</h3>
+        <button class="modal-close-btn" data-close="delete-modal">&times;</button>
+      </div>
+      <div class="delete-warning-body">
+        <p>Are you sure you want to delete the loan for <strong id="delete-borrower-name">-</strong>?</p>
+        <p class="alert-danger-text">
+          <strong>Warning:</strong> This action will permanently remove this loan and <u>all associated repayment history</u>. This cannot be undone.
+        </p>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" data-close="delete-modal">Cancel</button>
+        <button type="button" id="confirm-delete-btn" class="btn btn-danger">Delete Permanently</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification System -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <!-- Application Logic -->
+  <script src="./app.js"></script>
+
+  <!-- Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then((reg) => console.log('Lend Tracker Service Worker active:', reg.scope))
+          .catch((err) => console.log('Service Worker registration skipped:', err));
+      });
+    }
+  </script>
+</body>
+</html>
