@@ -87,13 +87,20 @@
   padding: 0;
 }
 
+html, body {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+  position: relative;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
   background-color: var(--bg-body);
   color: var(--text-main);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
-  padding-bottom: 90px; /* Room for mobile nav/fab */
+  padding-bottom: 90px;
 }
 
 /* Header */
@@ -2077,4 +2084,241 @@ body {
   font-size: 0.72rem;
   color: var(--text-muted);
   margin-top: 2px;
+}
+
+/* ==========================================================================
+   MOBILE-FIRST RESPONSIVE FIXES & POLISH (< 640px)
+   ========================================================================== */
+
+/* Main container mobile bounds */
+.main-container {
+  width: 100%;
+  max-width: 1000px;
+  margin: 12px auto;
+  padding: 0 12px;
+  box-sizing: border-box;
+}
+
+/* Header & Navbar on Mobile */
+.app-header {
+  padding: 10px 12px;
+}
+
+.header-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+.brand-icon {
+  width: 32px;
+  height: 32px;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.brand-text {
+  min-width: 0;
+}
+
+.brand-text h1 {
+  font-size: 1.05rem;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.brand-text .subtext {
+  font-size: 0.68rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* Mode Dropdown Trigger on Mobile */
+.mode-dropdown-trigger {
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  gap: 4px;
+}
+
+.current-mode-label {
+  font-size: 0.78rem;
+}
+
+/* Dropdown Menu positioning on Mobile */
+.mode-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(280px, calc(100vw - 24px));
+  max-width: calc(100vw - 24px);
+  box-sizing: border-box;
+}
+
+/* Nav Tabs */
+.nav-tabs {
+  padding: 3px;
+  margin-bottom: 14px;
+  gap: 3px;
+}
+
+.tab-btn {
+  padding: 8px 6px;
+  font-size: 0.82rem;
+  min-width: 0;
+  gap: 4px;
+}
+
+.tab-btn .tab-icon {
+  font-size: 1rem;
+}
+
+/* Metric Cards on Mobile */
+.metric-card {
+  padding: 14px 16px;
+}
+
+.metric-value {
+  font-size: 1.55rem;
+}
+
+/* Loan Card on Mobile */
+.loan-card {
+  padding: 14px;
+  gap: 12px;
+}
+
+.borrower-info h3 {
+  font-size: 1.05rem;
+}
+
+.loan-financials {
+  padding: 10px 8px;
+  gap: 4px;
+}
+
+.fin-col span {
+  font-size: 0.68rem;
+}
+
+.fin-col strong {
+  font-size: 0.9rem;
+}
+
+.loan-card-actions {
+  padding-top: 10px;
+  gap: 6px;
+}
+
+.loan-card-actions .btn {
+  padding: 6px 10px;
+  font-size: 0.78rem;
+}
+
+/* People Table in Overview on Mobile (Card layout instead of clipped grid) */
+@media (max-width: 600px) {
+  .people-net-header {
+    display: none !important;
+  }
+
+  .people-net-row {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 12px 14px;
+  }
+
+  .people-net-row > * {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .people-net-row .net-person-name {
+    font-size: 1rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 4px;
+    margin-bottom: 2px;
+  }
+
+  .people-net-row span:not(.net-person-name)::before {
+    content: "They owe you: ";
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+
+  .people-net-row span:nth-child(3)::before {
+    content: "You owe them: ";
+  }
+
+  .people-net-row strong::before {
+    content: "Net Balance: ";
+    font-weight: 600;
+    font-size: 0.8rem;
+  }
+}
+
+/* Date Range Filter Bar on Mobile */
+.date-filter-inputs {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.date-filter-inputs input[type="date"] {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 0.8rem;
+}
+
+.date-filter-actions {
+  width: 100%;
+}
+
+.date-filter-actions .btn {
+  flex: 1;
+}
+
+/* Modals on Mobile */
+.modal-box {
+  padding: 18px 16px;
+  max-height: 92vh;
+}
+
+.form-row {
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+/* Overview hero grid on Mobile */
+.net-card {
+  padding: 16px;
+}
+
+.net-card-value {
+  font-size: 1.5rem;
 }
