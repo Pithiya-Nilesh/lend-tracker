@@ -537,9 +537,9 @@ function renderBorrowDashboard() {
   el('borrow-metric-total-owe').textContent = formatCurrency(sum.total_i_owe);
 
   const count = (state.borrowings || []).length;
-  el('borrow-metric-count').textContent = `${count} Borrowing${count===1?'':'s'} Recorded`;
+  el('borrow-metric-total-count').textContent = `${count} Borrowing${count===1?'':'s'} Recorded`;
   const pct = sum.total_borrowed > 0 ? Math.round((sum.total_repaid/sum.total_borrowed)*100) : 0;
-  el('borrow-metric-repaid-pct').textContent = `${pct}% Repaid`;
+  el('borrow-metric-repaid-rate').textContent = `${pct}% Repaid`;
   const pending = (sum.counts.pending||0)+(sum.counts.partial||0);
   el('borrow-metric-pending-count').textContent = `${pending} Still Outstanding`;
 
@@ -705,7 +705,7 @@ function renderLendersView() {
 // ==============================================================================
 function renderOverview() {
   const el = id => document.getElementById(id);
-  if (!el('net-receivable')) return;
+  if (!el('overview-net-receivable')) return;
 
   // Apply date filter
   const fromDate = state.overviewFilters.fromDate;
@@ -729,22 +729,26 @@ function renderOverview() {
   const netPayable = filteredBorrowings.reduce((s,b) => s + b.remaining_balance, 0);
   const netPosition = netReceivable - netPayable;
 
-  el('net-receivable').textContent = formatCurrency(netReceivable);
-  el('net-payable').textContent = formatCurrency(netPayable);
-  el('net-position').textContent = formatCurrency(Math.abs(netPosition));
-  el('net-position-label').textContent = netPosition >= 0 ? '⚖️ Net You Are Owed' : '⚖️ Net You Owe';
+  el('overview-net-receivable').textContent = formatCurrency(netReceivable);
+  el('overview-net-payable').textContent = formatCurrency(netPayable);
+  el('overview-net-position').textContent = formatCurrency(Math.abs(netPosition));
+  el('overview-position-sub').textContent = netPosition >= 0 ? '⚖️ Net You Are Owed' : '⚖️ Net You Owe';
 
-  const posCard = el('net-position-card');
+  const posCard = el('overview-position-card');
   if (posCard) {
     posCard.classList.toggle('net-positive', netPosition >= 0);
     posCard.classList.toggle('net-negative', netPosition < 0);
   }
 
-  // Summary counts
-  el('overview-total-lent').textContent = formatCurrency(filteredLoans.reduce((s,l) => s+l.amount, 0));
-  el('overview-total-borrowed').textContent = formatCurrency(filteredBorrowings.reduce((s,b) => s+b.amount, 0));
-  el('overview-active-loans').textContent = filteredLoans.filter(l => l.status !== 'Completed').length;
-  el('overview-active-borrowings').textContent = filteredBorrowings.filter(b => b.status !== 'Completed').length;
+  // Summary counts (optional)
+  const elTotLent = el('overview-total-lent');
+  if (elTotLent) elTotLent.textContent = formatCurrency(filteredLoans.reduce((s,l) => s+l.amount, 0));
+  const elTotBor = el('overview-total-borrowed');
+  if (elTotBor) elTotBor.textContent = formatCurrency(filteredBorrowings.reduce((s,b) => s+b.amount, 0));
+  const elActLoans = el('overview-active-loans');
+  if (elActLoans) elActLoans.textContent = filteredLoans.filter(l => l.status !== 'Completed').length;
+  const elActBor = el('overview-active-borrowings');
+  if (elActBor) elActBor.textContent = filteredBorrowings.filter(b => b.status !== 'Completed').length;
 
   // Person-wise combined table
   const personMap = {};
@@ -762,7 +766,7 @@ function renderOverview() {
   const peopleRows = Object.values(personMap).filter(p => p.theyOweMe > 0 || p.iOweThem > 0);
   peopleRows.sort((a,b) => (b.theyOweMe - b.iOweThem) - (a.theyOweMe - a.iOweThem));
 
-  const table = el('people-net-table');
+  const table = el('overview-people-net-list');
   if (table) {
     if (!peopleRows.length) {
       table.innerHTML = '<p class="empty-state">No records match the current filter.</p>';
@@ -802,7 +806,7 @@ function renderOverview() {
     }))
   ].sort((a,b) => (b.date||'').localeCompare(a.date||'')).slice(0, 10);
 
-  const activityEl = el('recent-activity-list');
+  const activityEl = el('overview-recent-activity');
   if (activityEl) {
     const icons = { received:'💚', repaid:'🔴', lent:'💙', borrowed:'🟠' };
     const labels = { received:'Received from', repaid:'Repaid to', lent:'Lent to', borrowed:'Borrowed from' };
@@ -1689,7 +1693,7 @@ document.querySelectorAll('.open-add-borrow-btn').forEach(btn => btn.addEventLis
 // Header actions
 document.getElementById('settings-btn')?.addEventListener('click', () => { loadSettingsForm(); openModal('settings-modal'); });
 document.getElementById('open-setup-btn')?.addEventListener('click', () => { loadSettingsForm(); openModal('settings-modal'); });
-document.getElementById('refresh-btn')?.addEventListener('click', () => fetchAllData(true));
+// refresh-btn removed in favor of mode dropdown
 
 // Export buttons
 document.getElementById('export-loans-csv-btn')?.addEventListener('click', exportLoansToCsv);

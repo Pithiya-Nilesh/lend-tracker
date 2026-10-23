@@ -1,5 +1,5 @@
 // Lend Tracker Service Worker - Cache-First for static assets, Network-Only for API
-const CACHE_NAME = 'lend-tracker-v3.0.0';
+const CACHE_NAME = 'lend-tracker-v4.0.0';
 const STATIC_ASSETS = [
   './',
   './index.html',
