@@ -13,10 +13,12 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="LendTracker">
 
-  <!-- Manifest & Icons -->
+  <!-- Manifest & Favicons -->
   <link rel="manifest" href="./manifest.json">
-  <link rel="icon" type="image/png" href="./icons/icon-192.png">
-  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+  <link rel="icon" type="image/x-icon" href="./favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="./favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png">
 
   <!-- Stylesheet -->
   <link rel="stylesheet" href="./style.css">
@@ -142,11 +144,40 @@
           </div>
         </div>
         <div class="header-actions">
+          <!-- Mode Switcher Dropdown (Replaced Refresh Icon) -->
+          <div class="mode-dropdown-wrapper">
+            <button id="mode-dropdown-btn" class="mode-dropdown-trigger" title="Switch Mode (Lending / Borrowing / Overview)" aria-label="Switch Mode">
+              <span id="current-mode-icon">💰</span>
+              <span id="current-mode-text" class="current-mode-label">Lending</span>
+              <span class="dropdown-chevron">▼</span>
+            </button>
+            <div id="mode-dropdown-menu" class="mode-dropdown-menu hidden">
+              <button type="button" class="mode-dropdown-item active" data-mode="lend">
+                <span class="mode-item-icon">💰</span>
+                <div class="mode-item-desc">
+                  <strong>Money Given (Lending)</strong>
+                  <small>Track money lent to friends & family</small>
+                </div>
+              </button>
+              <button type="button" class="mode-dropdown-item" data-mode="borrow">
+                <span class="mode-item-icon">🏦</span>
+                <div class="mode-item-desc">
+                  <strong>Money Taken (Borrowing)</strong>
+                  <small>Track money borrowed & repayments</small>
+                </div>
+              </button>
+              <button type="button" class="mode-dropdown-item" data-mode="overview">
+                <span class="mode-item-icon">⚖️</span>
+                <div class="mode-item-desc">
+                  <strong>Net Overview</strong>
+                  <small>Compare receivable vs payable & net</small>
+                </div>
+              </button>
+            </div>
+          </div>
+
           <button id="theme-toggle-btn" class="icon-btn" title="Toggle Theme" aria-label="Toggle Theme">
             <span id="theme-icon">🌙</span>
-          </button>
-          <button id="refresh-btn" class="icon-btn" title="Refresh Data" aria-label="Refresh Data">
-            🔄
           </button>
           <button id="settings-btn" class="icon-btn" title="Settings & Backup" aria-label="Settings">
             ⚙️
@@ -155,12 +186,7 @@
       </div>
     </header>
 
-    <!-- ===== MODE SWITCHER (below header, above setup-banner) ===== -->
-    <div id="mode-switcher" class="mode-switcher">
-      <button class="mode-btn active" data-mode="lend">💰 Lending</button>
-      <button class="mode-btn" data-mode="overview">⚖️ Net Overview</button>
-      <button class="mode-btn" data-mode="borrow">🏦 Borrowing</button>
-    </div>
+
 
     <!-- Setup Alert (Shown if Web App URL or passcode is missing) -->
     <div id="setup-banner" class="setup-banner hidden">

@@ -224,13 +224,27 @@ function setAppMode(mode) {
   const borrowView = document.getElementById('borrow-app-view');
   const overviewView = document.getElementById('overview-app-view');
 
-  lendView.classList.toggle('hidden', mode !== 'lend');
-  borrowView.classList.toggle('hidden', mode !== 'borrow');
-  overviewView.classList.toggle('hidden', mode !== 'overview');
+  if (lendView) lendView.classList.toggle('hidden', mode !== 'lend');
+  if (borrowView) borrowView.classList.toggle('hidden', mode !== 'borrow');
+  if (overviewView) overviewView.classList.toggle('hidden', mode !== 'overview');
 
-  // Update switcher buttons
-  document.querySelectorAll('.mode-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.mode === mode);
+  // Update dropdown trigger icon & label in navbar
+  const iconEl = document.getElementById('current-mode-icon');
+  const textEl = document.getElementById('current-mode-text');
+  if (mode === 'borrow') {
+    if (iconEl) iconEl.textContent = '🏦';
+    if (textEl) textEl.textContent = 'Borrowing';
+  } else if (mode === 'overview') {
+    if (iconEl) iconEl.textContent = '⚖️';
+    if (textEl) textEl.textContent = 'Overview';
+  } else {
+    if (iconEl) iconEl.textContent = '💰';
+    if (textEl) textEl.textContent = 'Lending';
+  }
+
+  // Update dropdown menu items active state
+  document.querySelectorAll('.mode-dropdown-item').forEach(item => {
+    item.classList.toggle('active', item.dataset.mode === mode);
   });
 
   // Apply theme to document
@@ -1567,10 +1581,29 @@ document.querySelectorAll('#borrow-app-view .tab-btn').forEach(btn => {
   });
 });
 
-// Mode switcher
-document.querySelectorAll('.mode-btn').forEach(btn => {
-  btn.addEventListener('click', () => setAppMode(btn.dataset.mode));
-});
+// Navbar Mode Dropdown
+const modeDropdownBtn = document.getElementById('mode-dropdown-btn');
+const modeDropdownMenu = document.getElementById('mode-dropdown-menu');
+
+if (modeDropdownBtn && modeDropdownMenu) {
+  modeDropdownBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    modeDropdownMenu.classList.toggle('hidden');
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!modeDropdownMenu.classList.contains('hidden') && !modeDropdownBtn.contains(e.target)) {
+      modeDropdownMenu.classList.add('hidden');
+    }
+  });
+
+  document.querySelectorAll('.mode-dropdown-item').forEach(item => {
+    item.addEventListener('click', () => {
+      setAppMode(item.dataset.mode);
+      modeDropdownMenu.classList.add('hidden');
+    });
+  });
+}
 
 // Lend filter/search events
 document.getElementById('loan-search-input')?.addEventListener('input', e => {

@@ -1,11 +1,14 @@
 // Lend Tracker Service Worker - Cache-First for static assets, Network-Only for API
-const CACHE_NAME = 'lend-tracker-v2.0.0';
+const CACHE_NAME = 'lend-tracker-v3.0.0';
 const STATIC_ASSETS = [
   './',
   './index.html',
   './style.css',
   './app.js',
   './manifest.json',
+  './favicon.ico',
+  './favicon-32x32.png',
+  './favicon-16x16.png',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/apple-touch-icon.png'
