@@ -1688,7 +1688,7 @@ document.getElementById('lenders-search-input')?.addEventListener('input', rende
 
 // Open add modal buttons
 document.querySelectorAll('.open-add-loan-btn').forEach(btn => btn.addEventListener('click', openAddLoanModal));
-document.querySelectorAll('.open-add-borrow-btn').forEach(btn => btn.addEventListener('click', openAddBorrowingModal));
+document.querySelectorAll('.open-add-borrowing-btn, .open-add-borrow-btn').forEach(btn => btn.addEventListener('click', openAddBorrowingModal));
 
 // Header actions
 document.getElementById('settings-btn')?.addEventListener('click', () => { loadSettingsForm(); openModal('settings-modal'); });
